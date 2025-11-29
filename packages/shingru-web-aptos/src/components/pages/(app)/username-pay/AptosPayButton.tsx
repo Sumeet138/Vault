@@ -253,7 +253,34 @@ export default function AptosPayButton({
           body: JSON.stringify(paymentData),
         });
 
-        const recordResult = await recordResponse.json();
+        // Check if response is ok and has JSON content
+        if (!recordResponse.ok) {
+          const errorText = await recordResponse.text();
+          console.error('Payment recording failed with status:', recordResponse.status);
+          console.error('Error response:', errorText);
+          // Payment succeeded but recording failed - should be handled by monitoring
+          return;
+        }
+
+        // Check content type before parsing JSON
+        const contentType = recordResponse.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const responseText = await recordResponse.text();
+          console.error('Payment recording returned non-JSON response:', responseText);
+          // Payment succeeded but recording failed - should be handled by monitoring
+          return;
+        }
+
+        let recordResult;
+        try {
+          recordResult = await recordResponse.json();
+        } catch (jsonError) {
+          const responseText = await recordResponse.text();
+          console.error('Failed to parse payment recording response as JSON:', jsonError);
+          console.error('Response text:', responseText);
+          // Payment succeeded but recording failed - should be handled by monitoring
+          return;
+        }
         
         if (!recordResult.success) {
           console.error('Failed to record payment:', recordResult.error);

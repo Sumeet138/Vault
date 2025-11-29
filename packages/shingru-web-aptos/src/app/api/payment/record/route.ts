@@ -9,7 +9,26 @@ import { trackPaymentCompletion } from '@/lib/photon/rewards';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check content type before parsing
+    const contentType = request.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return NextResponse.json(
+        { error: 'Content-Type must be application/json' },
+        { status: 400 }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError: any) {
+      console.error('Failed to parse request body as JSON:', jsonError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body', details: jsonError.message },
+        { status: 400 }
+      );
+    }
+
     const {
       userId,
       txHash,

@@ -31,15 +31,26 @@ export default function LinkCard({
   const [isCopied, setIsCopied] = useState(false);
 
   // Generate link preview path - fallback to constructing from username and tag
-  const linkPreviewPath = link.linkPreview || 
-    (link.user?.username 
-      ? `/${link.user.username}${link.tag ? `/${link.tag}` : ""}`
-      : "");
+  const linkPreviewPath = (link.linkPreview && link.linkPreview.trim() !== "") 
+    ? link.linkPreview
+    : (link.user?.username 
+        ? `/${link.user.username}${link.tag ? `/${link.tag}` : ""}`
+        : "");
+  
+  // Debug logging
+  if (!linkPreviewPath) {
+    console.warn("⚠️ LinkCard: No linkPreviewPath available", {
+      linkPreview: link.linkPreview,
+      username: link.user?.username,
+      tag: link.tag,
+      linkId: link.id
+    });
+  }
 
   // Copy link to clipboard
-  const handleCopyLink = async (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    e?.preventDefault();
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     
     if (isCopied || !linkPreviewPath) {
       console.warn("Copy link: Cannot copy - isCopied:", isCopied, "linkPreviewPath:", linkPreviewPath);
@@ -47,44 +58,64 @@ export default function LinkCard({
     }
 
     const linkUrl = `${window.location.origin}${linkPreviewPath}`;
-    console.log("Copying link:", linkUrl);
+    console.log("📋 Copying link:", linkUrl);
+
+    // Check if we're in a secure context (HTTPS or localhost)
+    const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+    
+    if (!isSecureContext) {
+      console.warn("⚠️ Not in secure context, clipboard API may not work");
+    }
 
     try {
-      // Try modern clipboard API first
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(linkUrl);
-        console.log("✅ Successfully copied to clipboard");
+      // Try modern clipboard API first (requires secure context and user gesture)
+      if (navigator.clipboard && navigator.clipboard.writeText && isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(linkUrl);
+          console.log("✅ Successfully copied to clipboard");
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 2000);
+          return;
+        } catch (clipboardError: any) {
+          // Check for permission denied error
+          if (clipboardError.name === 'NotAllowedError' || clipboardError.message?.includes('permission')) {
+            console.warn("⚠️ Clipboard permission denied, trying fallback");
+          } else {
+            throw clipboardError; // Re-throw to trigger fallback
+          }
+        }
+      }
+      
+      // Fallback method (works in all contexts)
+      console.log("🔄 Using fallback copy method");
+      const textArea = document.createElement("textarea");
+      textArea.value = linkUrl;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      textArea.style.opacity = "0";
+      textArea.setAttribute('readonly', '');
+      document.body.appendChild(textArea);
+      
+      // Select and copy
+      textArea.select();
+      textArea.setSelectionRange(0, 99999); // For mobile devices
+      
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        console.log("✅ Successfully copied using fallback method");
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
       } else {
-        // Fallback for older browsers
-        throw new Error("Clipboard API not available");
+        console.error("❌ Fallback copy method failed - execCommand returned false");
+        alert(`Failed to copy link. Please copy manually:\n${linkUrl}`);
       }
-    } catch (error) {
-      console.error("❌ Clipboard API failed, trying fallback:", error);
-      // Fallback for older browsers or when clipboard API fails
-      try {
-        const textArea = document.createElement("textarea");
-        textArea.value = linkUrl;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        const successful = document.execCommand("copy");
-        document.body.removeChild(textArea);
-        
-        if (successful) {
-          console.log("✅ Successfully copied using fallback method");
-          setIsCopied(true);
-          setTimeout(() => setIsCopied(false), 2000);
-        } else {
-          console.error("❌ Fallback copy method failed");
-        }
-      } catch (fallbackError) {
-        console.error("❌ Both copy methods failed:", fallbackError);
-      }
+    } catch (error: any) {
+      console.error("❌ Copy failed:", error);
+      // Show user-friendly error
+      alert(`Failed to copy link. Please copy manually:\n${linkUrl}`);
     }
   };
 
@@ -170,10 +201,10 @@ export default function LinkCard({
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={handleCopyLink}
-                disabled={isCopied}
+                onClick={(e) => handleCopyLink(e)}
+                disabled={isCopied || !linkPreviewPath}
                 type="button"
-                className="w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors"
+                className="w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -299,10 +330,10 @@ export default function LinkCard({
 
             <div className="hidden md:flex flex-row items-center gap-0.5 md:gap-1 ml-2">
               <button
-                onClick={handleCopyLink}
-                disabled={isCopied}
+                onClick={(e) => handleCopyLink(e)}
+                disabled={isCopied || !linkPreviewPath}
                 type="button"
-                className="cursor-pointer w-8 h-8 md:w-7 md:h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors relative touch-manipulation"
+                className="cursor-pointer w-8 h-8 md:w-7 md:h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors relative touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div

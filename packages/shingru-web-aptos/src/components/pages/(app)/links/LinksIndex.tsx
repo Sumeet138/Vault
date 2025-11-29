@@ -39,11 +39,14 @@ export default function Links() {
   // Generate QR URL with fallback
   const getQRUrl = (link: Link | null): string => {
     if (!link) return "";
-    const linkPreviewPath = link.linkPreview || 
-      (link.user?.username 
-        ? `/${link.user.username}${link.tag ? `/${link.tag}` : ""}`
-        : "");
-    return linkPreviewPath ? `${window.location.origin}${linkPreviewPath}` : "";
+    const linkPreviewPath = (link.linkPreview && link.linkPreview.trim() !== "") 
+      ? link.linkPreview
+      : (link.user?.username 
+          ? `/${link.user.username}${link.tag ? `/${link.tag}` : ""}`
+          : "");
+    return linkPreviewPath && linkPreviewPath.trim() !== "" 
+      ? `${window.location.origin}${linkPreviewPath}` 
+      : "";
   };
 
   // Handle archived links toggle

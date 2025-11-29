@@ -24,7 +24,7 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
           style={{ width, maxWidth, y }}
           className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 flex items-center justify-between shadow-sm shadow-black/5 transition-all duration-300 ease-out"
         >
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/app" className="flex items-center gap-2">
             <div className="text-xl font-bold text-gray-900 tracking-tight">
               Vault
             </div>

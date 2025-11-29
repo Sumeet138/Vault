@@ -37,6 +37,7 @@ export default function RWAIndex() {
       const data = await response.json();
       if (data.success) {
         setAssets(data.data || []);
+      }
     } catch (error) {
       console.error("Error fetching assets:", error);
       setAssets([]);

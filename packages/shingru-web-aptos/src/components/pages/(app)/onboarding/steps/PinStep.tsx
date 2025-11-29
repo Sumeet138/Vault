@@ -3,7 +3,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useMetaKeys } from "@/providers/MetaKeysProvider";
 import { backend } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
-import ShingruLogo from "@/components/icons/ShingruLogo";
+import Image from "next/image";
 import { EASE_OUT_QUART } from "@/config/animation";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import CustomPinInput from "@/components/common/CustomPinInput";
@@ -581,7 +581,13 @@ export function PinStep({
           transition={{ duration: 0.4, type: "tween", ease: EASE_OUT_QUART }}
           className="mb-6 flex justify-center"
         >
-          <ShingruLogo />
+          <Image
+            src="/assets/cute/login-cat-with-phone.png"
+            width={80}
+            height={80}
+            alt="Cute cat"
+            className="w-20 h-20 object-contain"
+          />
         </motion.div>
 
         <motion.h1

@@ -6,7 +6,6 @@ import { useState, useEffect, useMemo } from "react";
 import WalletConnectModal from "@/components/pages/(app)/login/WalletConnectModal";
 import { motion } from "motion/react";
 import AnimateComponent from "@/components/common/AnimateComponent";
-import ShingruLogo from "@/components/icons/ShingruLogo";
 import { EASE_OUT_QUART } from "@/config/animation";
 import { useIsMounted } from "@/hooks/use-is-mounted";
 import MainButton from "@/components/common/MainButton";
@@ -275,7 +274,13 @@ function AuthenticatedLogin() {
                   transition={{ duration: 0.4, type: "tween", ease: EASE_OUT_QUART }}
                   className="mb-6 flex justify-center"
                 >
-                  <ShingruLogo />
+                  <Image
+                    src="/assets/cute/login-cat-with-phone.png"
+                    width={80}
+                    height={80}
+                    alt="Cute cat"
+                    className="w-20 h-20 object-contain"
+                  />
                 </motion.div>
 
                 <motion.h1
@@ -517,12 +522,18 @@ function WelcomeScreen({
                 transition={{ duration: 0.4, type: "tween", ease: EASE_OUT_QUART }}
                 className="mb-4 relative"
               >
-                <ShingruLogo />
+                <Image
+                  src="/assets/cute/login-cat-with-phone.png"
+                  width={80}
+                  height={80}
+                  alt="Cute cat"
+                  className="w-20 h-20 object-contain"
+                />
                 <motion.span
                   initial={!isMounted ? { opacity: 0, scale: 0.8 } : {}}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.4, type: "spring", bounce: 0.3, delay: 0.15 }}
-                  className="absolute -top-3 -right-3 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase bg-gradient-to-r from-cyan-400 to-blue-500 text-white rounded-md border border-black/5 shadow-sm inline-flex items-center gap-1"
+                  className="absolute -top-1 -right-3 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase bg-gradient-to-r from-cyan-400 to-blue-500 text-white rounded-md border border-black/5 shadow-sm inline-flex items-center gap-1"
                 >
                   Aptos
                 </motion.span>
@@ -845,10 +856,10 @@ const LoginGhosts = () => {
           }}
         >
           <Image
-            src="/assets/cute/login-ghost-with-phone.png"
+            src="/assets/cute/login-cat-with-phone.png"
             width={200}
             height={200}
-            alt=""
+            alt="Cute cat with phone"
             className="w-full h-auto"
           />
         </motion.div>

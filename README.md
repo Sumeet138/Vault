@@ -1,14 +1,14 @@
-![pivy-iota-banner](https://github.com/user-attachments/assets/22fad0e3-cdf1-4dcb-b25b-a2679cabd37a)
+![vault-iota-banner](https://github.com/user-attachments/assets/22fad0e3-cdf1-4dcb-b25b-a2679cabd37a)
 
 <div align="center">
 
-# PIVY on IOTA
+# VAULT on IOTA
 
 **The first stealth address implementation on IOTA**
 
 One shareable link. Infinite privacy. Complete self-custody.
 
-[Try it Live](https://iota.pivy.me) • [View Contract](https://iotascan.com/testnet/object/0x24772fde2e6bf966350598d38a33e8e1f0ce546ac5d5195f18f2c8502c25e907/txs) 
+[Try it Live](https://iota.vault.me) • [View Contract](https://iotascan.com/testnet/object/0x24772fde2e6bf966350598d38a33e8e1f0ce546ac5d5195f18f2c8502c25e907/txs) 
 
 **Submission for IOTA Moveathon Europe Edition**
 
@@ -31,7 +31,7 @@ Privacy shouldn't be optional for payments. It's a fundamental right.
 
 ## The Solution
 
-PIVY gives you one shareable link like `iota.pivy.me/yourname`. Share it anywhere.
+VAULT gives you one shareable link like `iota.vault.me/yourname`. Share it anywhere.
 
 Each person who pays you gets a unique, mathematically unlinkable address. They send to that address. You control the funds. Nobody can connect the dots.
 
@@ -55,9 +55,9 @@ One link. Infinite privacy. No compromises.
 
 | Resource | URL |
 |----------|-----|
-| Web App | [iota.pivy.me](https://iota.pivy.me) |
+| Web App | [iota.vault.me](https://iota.vault.me) |
 | Smart Contract | [View on IOTAScan](https://iotascan.com/testnet/object/0x24772fde2e6bf966350598d38a33e8e1f0ce546ac5d5195f18f2c8502c25e907/txs) |
-| Backend API | [api-iota.pivy.me](https://api-iota.pivy.me) |
+| Backend API | [api-iota.vault.me](https://api-iota.vault.me) |
 
 ---
 
@@ -613,7 +613,7 @@ NETWORK="testnet"
 
 **Built for IOTA Moveathon Europe Edition**
 
-[Try PIVY](https://iota.pivy.me)
+[Try VAULT](https://iota.vault.me)
 
 Privacy is not a feature. It's a right.
 

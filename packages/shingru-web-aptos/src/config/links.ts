@@ -1,3 +1,3 @@
 export const LINKS = {
-  GITHUB: "https://github.com/pivyme/shingru-stealth-aptos",
+  GITHUB: "https://github.com/Sumeet138/Vault",
 };

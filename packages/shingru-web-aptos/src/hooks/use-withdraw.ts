@@ -123,10 +123,10 @@ export function useWithdraw({ token, initialSearchQuery }: UseWithdrawArgs) {
         const results = response.data?.results || [];
         setSearchResults(results);
 
-        // Auto-select if it's a Shingru link and we found exactly one result
-        const pivyLinkRegex =
-          /^https?:\/\/shingru\.me\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
-        if (pivyLinkRegex.test(debouncedSearchQuery) && results.length === 1) {
+        // Auto-select if it's a Vault link and we found exactly one result
+        const vaultLinkRegex =
+          /^https?:\/\/vault\.me\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
+        if (vaultLinkRegex.test(debouncedSearchQuery) && results.length === 1) {
           const result = results[0];
           // Only auto-select if it's a shingru type result
           if (result.type === "shingru" || result.type === "username") {

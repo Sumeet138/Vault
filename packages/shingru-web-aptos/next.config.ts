@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "**.pivy.me",
+        hostname: "**.vault.me",
       },
     ],
   },

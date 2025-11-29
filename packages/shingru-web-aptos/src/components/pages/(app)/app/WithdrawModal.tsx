@@ -78,10 +78,10 @@ export default function WithdrawModal({
   const processQRCode = (code: string): string | null => {
     const trimmedCode = code.trim();
 
-    // Case 1: Shingru link (https://shingru.me/username or https://shingru.me/username/anything)
+    // Case 1: Vault link (https://vault.me/username or https://vault.me/username/anything)
     // Pass the full URL directly to backend
-    const pivyLinkRegex = /^https?:\/\/shingru\.me\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
-    if (pivyLinkRegex.test(trimmedCode)) {
+    const vaultLinkRegex = /^https?:\/\/vault\.me\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
+    if (vaultLinkRegex.test(trimmedCode)) {
       return trimmedCode; // Return full URL
     }
 

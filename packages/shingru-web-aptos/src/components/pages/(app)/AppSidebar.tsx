@@ -57,9 +57,9 @@ export default function AppSidebar() {
   return (
     <div className="hidden md:flex h-full flex-col items-center justify-center py-8 px-4 z-50 w-24 relative">
       {/* Branding */}
-      <div className="absolute top-8 font-bold text-xl tracking-tight text-gray-900">
-        vault
-      </div>
+      <Link href="/app" className="absolute top-8 font-bold text-xl tracking-tight text-gray-900">
+        Vault
+      </Link>
 
       {/* Dock Container */}
       <motion.div

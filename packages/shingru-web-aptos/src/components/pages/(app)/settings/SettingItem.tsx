@@ -23,7 +23,7 @@ export default function SettingItem({
     <div
       className={`${
         isGrouped
-          ? "px-4.5 py-4 cursor-pointer relative overflow-hidden"
+          ? "px-5 py-4 cursor-pointer relative overflow-hidden"
           : "bg-white rounded-3xl overflow-hidden border border-black/5 shadow-supa-smooth transition-shadow px-4 py-4 cursor-pointer relative"
       } flex flex-row items-center justify-between w-full h-fit`}
       onClick={handleClick}

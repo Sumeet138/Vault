@@ -261,7 +261,7 @@ const ProfileLoginBox = ({ onEditProfile }: { onEditProfile: () => void }) => {
 
   return (
     <div className="bg-white rounded-3xl overflow-hidden border border-black/5 shadow-supa-smooth">
-      <div className="px-4.5 py-4">
+      <div className="px-5 py-4">
         <div className="flex flex-row items-center gap-2 justify-between">
           <div className="flex flex-row items-center gap-3">
             <EmojiPicture
@@ -281,9 +281,11 @@ const ProfileLoginBox = ({ onEditProfile }: { onEditProfile: () => void }) => {
 
           <CuteButton
             onPress={onEditProfile}
-            className="w-full text-sm h-auto py-2 rounded-full px-4"
+            className="text-sm px-4 py-2 whitespace-nowrap"
             color="green"
             variant="flat"
+            size="sm"
+            radius="full"
           >
             Edit
           </CuteButton>

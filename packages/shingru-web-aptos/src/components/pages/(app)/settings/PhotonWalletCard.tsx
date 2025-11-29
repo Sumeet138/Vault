@@ -29,7 +29,7 @@ export default function PhotonWalletCard({
   if (!walletInfo && !loading) {
     return (
       <div className="bg-white rounded-3xl overflow-hidden border border-black/5 shadow-supa-smooth">
-        <div className="px-4.5 py-4">
+        <div className="px-5 py-4">
           <div className="flex flex-row items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
               <SparklesIcon className="w-6 h-6 text-white" />
@@ -59,7 +59,7 @@ export default function PhotonWalletCard({
   if (loading) {
     return (
       <div className="bg-white rounded-3xl overflow-hidden border border-black/5 shadow-supa-smooth">
-        <div className="px-4.5 py-4">
+        <div className="px-5 py-4">
           <div className="flex flex-row items-center gap-3 mb-4">
             <div className="skeleton w-12 h-12 rounded-full"></div>
             <div className="flex flex-col gap-2 flex-1">

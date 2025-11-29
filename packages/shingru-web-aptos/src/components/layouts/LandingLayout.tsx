@@ -26,7 +26,7 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
         >
           <Link href="/" className="flex items-center gap-2">
             <div className="text-xl font-bold text-gray-900 tracking-tight">
-              vault
+              Vault
             </div>
           </Link>
           <nav className="flex items-center gap-6" onMouseLeave={() => setHoveredLink(null)}>

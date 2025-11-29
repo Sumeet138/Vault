@@ -3,6 +3,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Custom Scrollbar Styles for Chatbot */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 20px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
 :root {
   /* Primary Colors */
   --primary: #000000;
@@ -293,7 +311,6 @@
   --animate-shiny-text: shiny-text 8s infinite;
 
   @keyframes shiny-text {
-
     0%,
     90%,
     100% {
@@ -376,10 +393,7 @@ h6 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(0,
-      0,
-      0,
-      0.2);
+  background-color: rgba(0, 0, 0, 0.2);
   /* A semi-transparent dark color for the thumb */
   border-radius: 10px;
   /* Fully rounded corners */
@@ -608,10 +622,12 @@ h6 {
 
 .shiny-text {
   color: #03071216;
-  background: linear-gradient(90deg,
-      rgba(0, 0, 0, 0) 40%,
-      rgba(0, 0, 0, 0.1) 50%,
-      rgba(0, 0, 0, 0) 60%);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0) 40%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0) 60%
+  );
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -705,13 +721,15 @@ nextjs-portal {
   position: absolute;
   inset: -2px;
   border-radius: 9999px;
-  background: conic-gradient(from var(--gradient-angle),
-      transparent 0%,
-      transparent 25%,
-      #22d3ee 50%,
-      #3b82f6 65%,
-      transparent 75%,
-      transparent 100%);
+  background: conic-gradient(
+    from var(--gradient-angle),
+    transparent 0%,
+    transparent 25%,
+    #22d3ee 50%,
+    #3b82f6 65%,
+    transparent 75%,
+    transparent 100%
+  );
   z-index: -1;
   animation: rotate-gradient 3s linear infinite;
   pointer-events: none;

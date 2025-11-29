@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import React, {
   createContext,
@@ -7,86 +7,86 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
-} from "react";
-import { useIsMounted } from "@/hooks/use-is-mounted";
-import { isTestnet } from "@/config/chains";
+} from "react"
+import { useIsMounted } from "@/hooks/use-is-mounted"
+import { isTestnet } from "@/config/chains"
 
 /* --------------------------------- Aptos ---------------------------------- */
-import { AptosWalletProvider } from "./AptosWalletProvider";
+import { AptosWalletProvider } from "./AptosWalletProvider"
 
-import { COLOR_PICKS } from "@/config/styling";
+import { COLOR_PICKS } from "@/config/styling"
 
 // Backend-less types
 interface AddressResponse {
-  chains?: Record<string, any>;
-  linkData?: any;
-  userData?: any;
-  supportedChains?: string[];
+  chains?: Record<string, any>
+  linkData?: any
+  userData?: any
+  supportedChains?: string[]
 }
 
 // Types
 interface CollectInfoFormData {
-  name: string;
-  email: string;
-  telegram: string;
+  name: string
+  email: string
+  telegram: string
 }
 
 // Context Types
 interface PayContextType {
   // Address data
-  addressData: any;
-  isInitializing: boolean;
-  error: string | null;
+  addressData: any
+  isInitializing: boolean
+  error: string | null
 
   // Chain selection
-  selectedChain: string | null;
-  availableChains: string[];
-  setSelectedChain: (chain: string) => void;
+  selectedChain: string | null
+  availableChains: string[]
+  setSelectedChain: (chain: string) => void
 
   // UI state
-  currentColor: string;
-  enableColorRotation: boolean;
-  setEnableColorRotation: (value: boolean) => void;
+  currentColor: string
+  enableColorRotation: boolean
+  setEnableColorRotation: (value: boolean) => void
 
   // Wallet
   wallet: {
-    connected: boolean;
-    connecting: boolean;
-    publicKey: string | null;
-    address: string | null;
-    chain: string | null;
-    disconnect: () => void;
-  };
-  refreshWallet: () => Promise<void>;
-  isWalletModalOpen: boolean;
-  setIsWalletModalOpen: (value: boolean) => void;
-  handleOpenWalletModal: () => void;
+    connected: boolean
+    connecting: boolean
+    publicKey: string | null
+    address: string | null
+    chain: string | null
+    disconnect: () => void
+  }
+  refreshWallet: () => Promise<void>
+  isWalletModalOpen: boolean
+  setIsWalletModalOpen: (value: boolean) => void
+  handleOpenWalletModal: () => void
 
   // Payment data
-  amount: string;
-  setAmount: (value: string) => void;
-  paymentNote: string;
-  setPaymentNote: (value: string) => void;
-  selectedToken: any;
-  setSelectedToken: (token: any) => void;
-  collectInfoData: CollectInfoFormData;
-  setCollectInfoData: (data: CollectInfoFormData) => void;
+  amount: string
+  setAmount: (value: string) => void
+  paymentNote: string
+  setPaymentNote: (value: string) => void
+  selectedToken: any
+  setSelectedToken: (token: any) => void
+  collectInfoData: CollectInfoFormData
+  setCollectInfoData: (data: CollectInfoFormData) => void
 
   // Payment flow
-  paymentSuccess: any;
-  setPaymentSuccess: (details: any) => void;
-  resetForNewPayment: () => void;
-  submitPaymentInfoAndGetId: () => Promise<string | undefined>;
+  paymentSuccess: any
+  setPaymentSuccess: (details: any) => void
+  resetForNewPayment: () => void
+  submitPaymentInfoAndGetId: () => Promise<string | undefined>
 }
 
-const PayContext = createContext<PayContextType | null>(null);
+const PayContext = createContext<PayContextType | null>(null)
 
 export function usePay() {
-  const context = useContext(PayContext);
+  const context = useContext(PayContext)
   if (!context) {
-    throw new Error("usePay must be used within a PayProvider");
+    throw new Error("usePay must be used within a PayProvider")
   }
-  return context;
+  return context
 }
 
 // Internal Pay Context Provider (wrapped by wallet providers)
@@ -96,44 +96,47 @@ function PayContextProvider({
   tag,
   initialData,
 }: {
-  children: React.ReactNode;
-  username: string;
-  tag: string;
-  initialData?: AddressResponse | null;
+  children: React.ReactNode
+  username: string
+  tag: string
+  initialData?: AddressResponse | null
 }) {
-  const isMounted = useIsMounted();
+  const isMounted = useIsMounted()
 
   // Address data
-  const [addressData, setAddressData] = useState<any>(initialData || null);
-  const [isInitializing, setIsInitializing] = useState(!initialData);
-  const [error, setError] = useState<string | null>(null);
+  const [addressData, setAddressData] = useState<any>(initialData || null)
+  const [isInitializing, setIsInitializing] = useState(!initialData)
+  const [error, setError] = useState<string | null>(null)
 
   // Fetch user data from Supabase if initialData is not provided (backend-less mode)
   useEffect(() => {
-    if (initialData || !username) return;
+    if (initialData || !username) return
 
     const fetchUserData = async () => {
       try {
-        setIsInitializing(true);
-        console.log("🔍 Fetching user data from Supabase for username:", username);
-        
+        setIsInitializing(true)
+        console.log(
+          "🔍 Fetching user data from Supabase for username:",
+          username
+        )
+
         // Import Supabase client dynamically
-        const { supabase } = await import("@/lib/supabase/client");
-        
+        const { supabase } = await import("@/lib/supabase/client")
+
         // Fetch user by username
         const { data: userData, error: userError } = await supabase
           .from("users")
           .select("*")
           .eq("username", username)
-          .maybeSingle();
+          .maybeSingle()
 
-        console.log("👤 User query result:", { userData, userError });
+        console.log("👤 User query result:", { userData, userError })
 
         if (userError || !userData) {
-          console.error("❌ User not found:", userError);
-          setError("User not found");
-          setIsInitializing(false);
-          return;
+          console.error("❌ User not found:", userError)
+          setError("User not found")
+          setIsInitializing(false)
+          return
         }
 
         // Fetch user's wallet with meta keys
@@ -142,23 +145,23 @@ function PayContextProvider({
           .select("*")
           .eq("user_id", userData.id)
           .eq("chain", "APTOS")
-          .maybeSingle();
+          .maybeSingle()
 
-        console.log("💳 Wallet query result:", { walletData, walletError });
+        console.log("💳 Wallet query result:", { walletData, walletError })
 
         // Handle case where wallet doesn't exist yet (new user)
         if (walletError || !walletData) {
-          console.warn("⚠️ Wallet not found for user:", userData.id);
-          console.warn("⚠️ This user may not have completed onboarding yet");
-          
+          console.warn("⚠️ Wallet not found for user:", userData.id)
+          console.warn("⚠️ This user may not have completed onboarding yet")
+
           // Construct addressData without meta keys (user needs to complete onboarding)
           const profileImageData = userData.profile_image_data || {
             emoji: "👻",
             backgroundColor: "blue",
-          };
+          }
 
           if (!profileImageData.backgroundColor) {
-            profileImageData.backgroundColor = "blue";
+            profileImageData.backgroundColor = "blue"
           }
 
           const constructedData = {
@@ -179,26 +182,29 @@ function PayContextProvider({
                 isEnabled: false, // Disabled until wallet is set up
               },
             },
-          };
+          }
 
-          console.log("✅ Address data constructed (without wallet):", constructedData);
-          setAddressData(constructedData);
+          console.log(
+            "✅ Address data constructed (without wallet):",
+            constructedData
+          )
+          setAddressData(constructedData)
           // Don't set error - let the page load and show a warning in the UI instead
           // The payment button will show an appropriate error when clicked
-          setError(null);
-          setIsInitializing(false);
-          return;
+          setError(null)
+          setIsInitializing(false)
+          return
         }
 
         // Construct addressData in the expected format
         const profileImageData = userData.profile_image_data || {
           emoji: "👻",
           backgroundColor: "blue",
-        };
+        }
 
         // Ensure backgroundColor is valid
         if (!profileImageData.backgroundColor) {
-          profileImageData.backgroundColor = "blue";
+          profileImageData.backgroundColor = "blue"
         }
 
         const constructedData = {
@@ -219,101 +225,101 @@ function PayContextProvider({
               isEnabled: true,
             },
           },
-        };
+        }
 
-        console.log("✅ Address data constructed:", constructedData);
-        setAddressData(constructedData);
-        setError(null);
+        console.log("✅ Address data constructed:", constructedData)
+        setAddressData(constructedData)
+        setError(null)
       } catch (err) {
-        console.error("Error fetching user data:", err);
-        setError("Failed to load user data");
+        console.error("Error fetching user data:", err)
+        setError("Failed to load user data")
       } finally {
-        setIsInitializing(false);
+        setIsInitializing(false)
       }
-    };
+    }
 
-    fetchUserData();
-  }, [initialData, username]);
+    fetchUserData()
+  }, [initialData, username])
 
   const globallyAvailableChains = useMemo(() => {
-    const chainsStr = process.env.NEXT_PUBLIC_AVAILABLE_CHAINS || "APTOS";
-    return chainsStr.split(",").map((chain) => chain.trim().toUpperCase());
-  }, []);
+    const chainsStr = process.env.NEXT_PUBLIC_AVAILABLE_CHAINS || "APTOS"
+    return chainsStr.split(",").map((chain) => chain.trim().toUpperCase())
+  }, [])
 
   // Chain selection
-  const [selectedChain, setSelectedChain] = useState<string | null>(null);
-  const [availableChains, setAvailableChains] = useState<string[]>([]);
+  const [selectedChain, setSelectedChain] = useState<string | null>(null)
+  const [availableChains, setAvailableChains] = useState<string[]>([])
 
   // UI state
-  const [currentColor, setCurrentColor] = useState<string>("blue"); // Default color
-  const [enableColorRotation, setEnableColorRotation] = useState(false); // Easy toggle for debugging
+  const [currentColor, setCurrentColor] = useState<string>("blue") // Default color
+  const [enableColorRotation, setEnableColorRotation] = useState(false) // Easy toggle for debugging
 
   // Color rotation for debugging (disabled by default)
   useEffect(() => {
-    if (!enableColorRotation) return;
+    if (!enableColorRotation) return
 
     const interval = setInterval(() => {
       setCurrentColor((prevColor) => {
-        const currentIndex = COLOR_PICKS.findIndex((c) => c.id === prevColor);
-        const nextIndex = (currentIndex + 1) % COLOR_PICKS.length;
-        return COLOR_PICKS[nextIndex].id;
-      });
-    }, 500);
+        const currentIndex = COLOR_PICKS.findIndex((c) => c.id === prevColor)
+        const nextIndex = (currentIndex + 1) % COLOR_PICKS.length
+        return COLOR_PICKS[nextIndex].id
+      })
+    }, 500)
 
-    return () => clearInterval(interval);
-  }, [enableColorRotation]);
+    return () => clearInterval(interval)
+  }, [enableColorRotation])
 
   // Set color from API response when addressData is loaded
   useEffect(() => {
     if (addressData?.linkData?.backgroundColor) {
-      const color = addressData.linkData.backgroundColor;
+      const color = addressData.linkData.backgroundColor
       // Verify color exists in COLOR_PICKS
-      const colorExists = COLOR_PICKS.find((c) => c.id === color);
+      const colorExists = COLOR_PICKS.find((c) => c.id === color)
       if (colorExists) {
-        setCurrentColor(color);
+        setCurrentColor(color)
       } else {
-        console.warn(`Color ${color} not found in COLOR_PICKS, using default`);
-        setCurrentColor("blue");
+        console.warn(`Color ${color} not found in COLOR_PICKS, using default`)
+        setCurrentColor("blue")
       }
     } else if (addressData?.userData?.profileImageData?.backgroundColor) {
       // Fallback to user's profile color if link doesn't have one
-      const color = addressData.userData.profileImageData.backgroundColor;
-      const colorExists = COLOR_PICKS.find((c) => c.id === color);
+      const color = addressData.userData.profileImageData.backgroundColor
+      const colorExists = COLOR_PICKS.find((c) => c.id === color)
       if (colorExists) {
-        setCurrentColor(color);
+        setCurrentColor(color)
       } else {
-        console.warn(`Color ${color} not found in COLOR_PICKS, using default`);
-        setCurrentColor("blue");
+        console.warn(`Color ${color} not found in COLOR_PICKS, using default`)
+        setCurrentColor("blue")
       }
     }
-  }, [addressData]);
+  }, [addressData])
 
   // Wallet modal state
-  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
 
   // Payment data
-  const [amount, setAmount] = useState("");
-  const [paymentNote, setPaymentNote] = useState("");
-  const [selectedToken, setSelectedToken] = useState<any>(null);
-  const [paymentSuccess, setPaymentSuccess] = useState<any>(null);
+  const [amount, setAmount] = useState("")
+  const [paymentNote, setPaymentNote] = useState("")
+  const [selectedToken, setSelectedToken] = useState<any>(null)
+  const [paymentSuccess, setPaymentSuccess] = useState<any>(null)
   const [collectInfoData, setCollectInfoData] = useState<CollectInfoFormData>({
     name: "",
     email: "",
     telegram: "",
-  });
+  })
 
   const handleSetCollectInfoData = useCallback((data: CollectInfoFormData) => {
-    setCollectInfoData(data);
-  }, []);
+    setCollectInfoData(data)
+  }, [])
 
   // Backend-less: Generate a local payment ID
   const submitPaymentInfoAndGetId = async (): Promise<string | undefined> => {
-    const paymentData = [];
+    const paymentData = []
     if (paymentNote) {
       paymentData.push({
         type: "note",
         value: paymentNote,
-      });
+      })
     }
 
     for (const [key, value] of Object.entries(collectInfoData)) {
@@ -321,75 +327,77 @@ function PayContextProvider({
         paymentData.push({
           type: key,
           value: value as string,
-        });
+        })
       }
     }
 
     if (paymentData.length === 0) {
-      return undefined;
+      return undefined
     }
 
     // Generate a local payment ID (backend-less)
-    const paymentId = `local_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    return paymentId;
-  };
+    const paymentId = `local_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(7)}`
+    return paymentId
+  }
 
   // Get Aptos wallet from window
   const getAptosWallet = useCallback(() => {
-    if (typeof window === "undefined") return null;
-    return (window as any).aptos;
-  }, []);
+    if (typeof window === "undefined") return null
+    return (window as any).aptos
+  }, [])
 
-  const [aptosAccount, setAptosAccount] = useState<string | null>(null);
+  const [aptosAccount, setAptosAccount] = useState<string | null>(null)
 
   // Check wallet connection
   const checkWallet = useCallback(async () => {
-    if (!isMounted) return;
+    if (!isMounted) return
 
-    const wallet = getAptosWallet();
+    const wallet = getAptosWallet()
     if (wallet) {
       try {
-        const account = await wallet.account();
+        const account = await wallet.account()
         if (account) {
-          setAptosAccount(account.address);
+          setAptosAccount(account.address)
         } else {
-          setAptosAccount(null);
+          setAptosAccount(null)
         }
       } catch (error) {
-        setAptosAccount(null);
+        setAptosAccount(null)
       }
     } else {
-      setAptosAccount(null);
+      setAptosAccount(null)
     }
-  }, [isMounted, getAptosWallet]);
+  }, [isMounted, getAptosWallet])
 
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isMounted) return
 
-    checkWallet();
-    
+    checkWallet()
+
     // Listen for wallet changes
-    const interval = setInterval(checkWallet, 1000);
-    return () => clearInterval(interval);
-  }, [isMounted, checkWallet]);
+    const interval = setInterval(checkWallet, 1000)
+    return () => clearInterval(interval)
+  }, [isMounted, checkWallet])
 
   const refreshWallet = useCallback(async () => {
-    await checkWallet();
-  }, [checkWallet]);
+    await checkWallet()
+  }, [checkWallet])
 
   const handleDisconnect = useCallback(async () => {
     try {
-      console.log("Disconnecting wallet...");
-      const wallet = getAptosWallet();
+      console.log("Disconnecting wallet...")
+      const wallet = getAptosWallet()
       if (wallet) {
-        await wallet.disconnect();
+        await wallet.disconnect()
       }
-      setAptosAccount(null);
-      console.log("Wallet disconnected successfully");
+      setAptosAccount(null)
+      console.log("Wallet disconnected successfully")
     } catch (error) {
-      console.error("Error disconnecting wallet:", error);
+      console.error("Error disconnecting wallet:", error)
     }
-  }, [getAptosWallet]);
+  }, [getAptosWallet])
 
   const wallet = useMemo(() => {
     if (!isMounted) {
@@ -400,7 +408,7 @@ function PayContextProvider({
         address: null,
         chain: null,
         disconnect: handleDisconnect,
-      };
+      }
     }
 
     return {
@@ -410,127 +418,120 @@ function PayContextProvider({
       address: aptosAccount,
       chain: "APTOS",
       disconnect: handleDisconnect,
-    };
-  }, [
-    isMounted,
-    aptosAccount,
-    handleDisconnect,
-  ]);
+    }
+  }, [isMounted, aptosAccount, handleDisconnect])
 
   const handleOpenWalletModal = () => {
-    if (!isMounted) return;
-    setIsWalletModalOpen(true);
-  };
+    if (!isMounted) return
+    setIsWalletModalOpen(true)
+  }
 
   // Reset function for new payment
   const resetForNewPayment = useCallback(() => {
-    setPaymentSuccess(null);
-    setPaymentNote("");
+    setPaymentSuccess(null)
+    setPaymentNote("")
     setCollectInfoData({
       name: "",
       email: "",
       telegram: "",
-    });
+    })
 
-    const isFixed = addressData?.linkData?.amountType === "FIXED";
+    const isFixed = addressData?.linkData?.amountType === "FIXED"
     if (!isFixed) {
-      setAmount("");
-      setSelectedToken(null);
+      setAmount("")
+      setSelectedToken(null)
     }
-  }, [addressData]);
+  }, [addressData])
 
   useEffect(() => {
-    if (!addressData) return;
+    if (!addressData) return
 
-    const isFixed = addressData.linkData?.amountType === "FIXED";
+    const isFixed = addressData.linkData?.amountType === "FIXED"
 
-    if (
-      isFixed &&
-      selectedChain &&
-      addressData.chains[selectedChain]
-    ) {
-      const chainData = addressData.chains[selectedChain];
-      setAmount(chainData.amount.toString());
+    if (isFixed && selectedChain && addressData.chains[selectedChain]) {
+      const chainData = addressData.chains[selectedChain]
+      setAmount(chainData.amount.toString())
       if (chainData.mint) {
         setSelectedToken({
           symbol: chainData.mint.symbol,
           decimals: chainData.mint.decimals,
           isNative: chainData.mint.isNative,
           address: chainData.mint.mintAddress,
-        });
+        })
       }
     } else if (!isFixed) {
-      setAmount("");
-      setSelectedToken(null);
+      setAmount("")
+      setSelectedToken(null)
     }
 
-    setPaymentNote("");
+    setPaymentNote("")
     setCollectInfoData({
       name: "",
       email: "",
       telegram: "",
-    });
-  }, [addressData, selectedChain]);
+    })
+  }, [addressData, selectedChain])
 
   // Load address data from initialData or use defaults
   useEffect(() => {
-    let mounted = true;
+    let mounted = true
 
     const loadAddressData = async () => {
-      setIsInitializing(true);
-      setError(null);
+      setIsInitializing(true)
+      setError(null)
 
       try {
         // Use initialData if provided, otherwise fall back to defaults
         if (initialData) {
-          if (!mounted) return;
-          setAddressData(initialData);
-          
+          if (!mounted) return
+          setAddressData(initialData)
+
           // Set available chains
           if (initialData.supportedChains) {
-            const filteredChains = initialData.supportedChains.filter((chain: string) =>
-              globallyAvailableChains.some((globalChain: string) =>
-                chain.toUpperCase().includes(globalChain.toUpperCase())
-              )
-            );
-            setAvailableChains(filteredChains);
+            const filteredChains = initialData.supportedChains.filter(
+              (chain: string) =>
+                globallyAvailableChains.some((globalChain: string) =>
+                  chain.toUpperCase().includes(globalChain.toUpperCase())
+                )
+            )
+            setAvailableChains(filteredChains)
             // Auto-select Aptos first if available
             if (filteredChains.length > 0) {
               const aptosChain = filteredChains.find((chain: string) =>
                 chain.includes("APTOS")
-              );
-              setSelectedChain(aptosChain || filteredChains[0]);
+              )
+              setSelectedChain(aptosChain || filteredChains[0])
             }
           } else {
             // Default to Aptos if no chains specified
-            setAvailableChains(["APTOS"]);
-            setSelectedChain("APTOS");
+            setAvailableChains(["APTOS"])
+            setSelectedChain("APTOS")
           }
         } else {
           // Fallback: When no initial data is provided, default to Aptos chain
           // This can happen when loading a user's page before their data is fetched
-          console.warn("No initial data provided - defaulting to Aptos chain");
-          if (!mounted) return;
-          setAvailableChains(["APTOS"]);
-          setSelectedChain("APTOS");
+          console.warn("No initial data provided - defaulting to Aptos chain")
+          if (!mounted) return
+          setAvailableChains(["APTOS"])
+          setSelectedChain("APTOS")
         }
       } catch (err: any) {
-        if (!mounted) return;
-        console.error("Error loading address data:", err);
-        setError(err.message || "Failed to load data");
+        if (!mounted) return
+        console.error("Error loading address data:", err)
+        setError(err.message || "Failed to load data")
       } finally {
         if (mounted) {
-          setIsInitializing(false);
+          setIsInitializing(false)
         }
       }
-    };
+    }
 
-    loadAddressData();
+    loadAddressData()
 
     return () => {
-      mounted = false;
-    };
-  }, [username, tag, initialData, globallyAvailableChains]);
+      mounted = false
+    }
+  }, [username, tag, initialData, globallyAvailableChains])
 
   const value: PayContextType = {
     // Address data
@@ -570,15 +571,10 @@ function PayContextProvider({
     setPaymentSuccess,
     resetForNewPayment,
     submitPaymentInfoAndGetId,
-  };
+  }
 
-  return (
-    <PayContext.Provider value={value}>
-      {children}
-    </PayContext.Provider>
-  );
+  return <PayContext.Provider value={value}>{children}</PayContext.Provider>
 }
-
 
 // Wallet Provider Wrapper with Context
 function PayWalletProviderWithContext({
@@ -587,12 +583,12 @@ function PayWalletProviderWithContext({
   tag,
   initialData,
 }: {
-  children: React.ReactNode;
-  username: string;
-  tag: string;
-  initialData?: AddressResponse;
+  children: React.ReactNode
+  username: string
+  tag: string
+  initialData?: AddressResponse
 }) {
-  const isMounted = useIsMounted();
+  const isMounted = useIsMounted()
 
   // Only render wallet providers and context on client side to prevent SSR issues
   if (!isMounted) {
@@ -605,7 +601,7 @@ function PayWalletProviderWithContext({
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -618,7 +614,7 @@ function PayWalletProviderWithContext({
         {children}
       </PayContextProvider>
     </AptosWalletProvider>
-  );
+  )
 }
 
 // Main PayProvider export
@@ -628,10 +624,10 @@ export default function PayProvider({
   tag,
   initialData,
 }: {
-  children: React.ReactNode;
-  username: string;
-  tag: string;
-  initialData?: AddressResponse;
+  children: React.ReactNode
+  username: string
+  tag: string
+  initialData?: AddressResponse
 }) {
   return (
     <PayWalletProviderWithContext
@@ -641,5 +637,5 @@ export default function PayProvider({
     >
       {children}
     </PayWalletProviderWithContext>
-  );
+  )
 }

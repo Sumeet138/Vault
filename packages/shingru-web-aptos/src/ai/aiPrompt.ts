@@ -41,7 +41,7 @@ Core Knowledge and Expertise:
 
 **Common User Questions:**
 - How to set up an account: Connect Petra wallet, set a PIN, and you're ready
-- How to receive payments: Share your Vault username (vault-aptos.vercel.app/username)
+- How to receive payments: Share your Vault username (your-domain.com/username)
 - How to withdraw: Go to dashboard, click withdraw, enter destination address
 - Privacy explanation: Each payment goes to a unique address that can't be linked to you
 - Security: Keys never leave your browser, encrypted with your PIN

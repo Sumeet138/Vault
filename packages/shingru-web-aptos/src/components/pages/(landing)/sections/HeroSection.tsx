@@ -8,6 +8,7 @@ import { EASE_OUT_QUART } from "@/config/animation"
 import Link from "next/link"
 import { useIsMounted } from "@/hooks/use-is-mounted"
 import { RocketDoodle } from "@/components/icons/RocketDoodle"
+import { getBaseHostname } from "@/utils/url"
 import { CornerAccent } from "@/components/icons/CornerAccent"
 
 interface Profile {
@@ -404,7 +405,7 @@ export default function HeroSection() {
                     </motion.span>
                   </motion.div>
                   <div className="text-gray-500 font-medium text-sm md:text-base whitespace-nowrap">
-                    vault-aptos.vercel.app /{" "}
+                    {getBaseHostname()} /{" "}
                     <span className="inline-flex items-center align-bottom">
                       <motion.span
                         className="inline-block overflow-hidden"

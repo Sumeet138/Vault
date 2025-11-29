@@ -150,10 +150,18 @@ function BalanceCard() {
   const processQRCode = (code: string): string | null => {
     const trimmedCode = code.trim();
 
-    // Case 1: Vault link (https://vault-aptos.vercel.app/username or https://vault-aptos.vercel.app/username/anything)
-    const vaultLinkRegex = /^https?:\/\/vault-aptos\.vercel\.app\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
-    if (vaultLinkRegex.test(trimmedCode)) {
-      return trimmedCode; // Return full URL
+    // Case 1: Vault link (matches current origin with /username or /username/anything pattern)
+    if (typeof window !== "undefined") {
+      const currentOrigin = window.location.origin;
+      // Check if the code is a URL that matches the current origin
+      try {
+        const url = new URL(trimmedCode);
+        if (url.origin === currentOrigin && /^\/[a-zA-Z0-9_.-]+(?:\/.*)?$/.test(url.pathname)) {
+          return trimmedCode; // Return full URL
+        }
+      } catch {
+        // Not a valid URL, continue to other checks
+      }
     }
 
     // Case 2: Aptos address

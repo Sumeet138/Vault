@@ -4,6 +4,7 @@ import "./globals.css"
 import RootProvider from "@/providers/RootProvider"
 import { Inter } from "next/font/google"
 import ShingruChatbot from "@/components/common/ShingruChatbot"
+import { getBaseUrl } from "@/utils/url"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
     "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
   openGraph: {
     title: "Vault - Get Paid, Stay Private",
-    url: "https://vault-aptos.vercel.app",
+    url: getBaseUrl(),
     description:
       "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
   },

@@ -124,13 +124,19 @@ export function useWithdraw({ token, initialSearchQuery }: UseWithdrawArgs) {
         setSearchResults(results);
 
         // Auto-select if it's a Vault link and we found exactly one result
-        const vaultLinkRegex =
-          /^https?:\/\/vault-aptos\.vercel\.app\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
-        if (vaultLinkRegex.test(debouncedSearchQuery) && results.length === 1) {
-          const result = results[0];
-          // Only auto-select if it's a vault type result
-          if (result.type === "vault" || result.type === "username") {
-            handleResultSelect(result);
+        if (typeof window !== "undefined" && results.length === 1) {
+          try {
+            const url = new URL(debouncedSearchQuery);
+            // Check if the URL matches the current origin and has a valid username path
+            if (url.origin === window.location.origin && /^\/[a-zA-Z0-9_.-]+(?:\/.*)?$/.test(url.pathname)) {
+              const result = results[0];
+              // Only auto-select if it's a vault type result
+              if (result.type === "vault" || result.type === "username") {
+                handleResultSelect(result);
+              }
+            }
+          } catch {
+            // Not a valid URL, continue
           }
         }
       } catch {

@@ -10,6 +10,7 @@ import { EASE_OUT_QUART } from "@/config/animation";
 import { useIsMounted } from "@/hooks/use-is-mounted";
 import MainButton from "@/components/common/MainButton";
 import { checkUsernameAvailability, updateUsername, updateUsernameByWallet } from "@/lib/supabase/users";
+import { getBaseHostname } from "@/utils/url";
 
 interface UsernameStepProps {
   savedUsername?: string;
@@ -247,7 +248,7 @@ export function UsernameStep({
         <div className="w-full space-y-2">
           <div className="relative flex items-center">
             <span className="absolute left-5 z-10 font-semibold text-gray-500 pointer-events-none select-none">
-              vault-aptos.vercel.app/
+              {getBaseHostname()}/
             </span>
             <Input
               id="username"

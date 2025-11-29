@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import MainButton from "@/components/common/MainButton";
 import { FiEdit2 } from "react-icons/fi";
 import { getTransitionConfig } from "@/config/animation";
+import { getBaseHostname } from "@/utils/url";
 
 interface LinkNameStyleInputProps {
   // Name and URL
@@ -50,10 +51,12 @@ export default function LinkNameStyleInput({
   const { links } = useUser();
 
   const urlPreview = useMemo(
-    () =>
-      name
-        ? `vault-aptos.vercel.app/${username || "username"}/${generateSlug(name)}`
-        : `vault-aptos.vercel.app/${username || "username"}/your-link-name`,
+    () => {
+      const hostname = getBaseHostname();
+      return name
+        ? `${hostname}/${username || "username"}/${generateSlug(name)}`
+        : `${hostname}/${username || "username"}/your-link-name`;
+    },
     [name, username, generateSlug]
   );
 

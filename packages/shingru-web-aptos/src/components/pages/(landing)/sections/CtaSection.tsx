@@ -4,6 +4,7 @@ import HugeCloudImage from "@/assets/images/huge-cloud.png";
 import { Marquee } from "@/components/magicui/Marquee";
 import Image from "next/image";
 import Link from "next/link";
+import { getBaseHostname } from "@/utils/url";
 
 const publicAddresses = [
   { id: 1, address: "0x9A12...C3dA" },
@@ -94,7 +95,7 @@ const PaymentLinkPill = ({
       <span>{emoji}</span>
     </div>
     <p>
-      <span className="text-gray-500">vault-aptos.vercel.app /</span>{" "}
+      <span className="text-gray-500">{getBaseHostname()} /</span>{" "}
       <span className="font-semibold text-black">{name}</span>{" "}
       <span className="text-gray-500">/ {role}</span>
     </p>

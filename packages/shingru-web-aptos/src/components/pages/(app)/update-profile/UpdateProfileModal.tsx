@@ -13,6 +13,7 @@ import EmojiColorPicker from "@/components/common/EmojiColorPicker";
 import { AddProfileImageButton } from "../onboarding/steps/AddProfileImageButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getBaseHostname } from "@/utils/url";
 import CuteModal from "@/components/common/CuteModal";
 import MainButton from "@/components/common/MainButton";
 import UsernameAvailStatusPill from "@/components/common/UsernameAvailStatusPill";
@@ -233,7 +234,7 @@ export default function UpdateProfileModal({
               </Label>
               <div className="relative flex items-center">
                 <span className="absolute left-5 z-10 font-semibold text-sm text-gray-500 rounded-full top-1/2 -translate-y-1/2">
-                  vault-aptos.vercel.app/
+                  {getBaseHostname()}/
                 </span>
                 <Input
                   id="username"

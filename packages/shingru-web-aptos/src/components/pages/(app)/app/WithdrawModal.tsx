@@ -19,6 +19,7 @@ import { ExternalLinkIcon } from "lucide-react";
 import { getExplorerTxLink } from "@/utils/misc";
 import { type UserToken as TokenBalance } from "@/lib/api/user";
 import { useWithdraw } from "@/hooks/use-withdraw";
+import { getBaseHostname } from "@/utils/url";
 import { useAuth } from "@/providers/AuthProvider";
 import { type SearchResult } from "@/lib/api/address";
 import Image from "next/image";
@@ -536,7 +537,7 @@ export default function WithdrawModal({
                                     shortenId(result.address)}
                                   {(result.type === "username" ||
                                     result.type === "vault") &&
-                                    `vault-aptos.vercel.app/${result.username}`}
+                                    `${getBaseHostname()}/${result.username}`}
                                   {result.type === "ans" &&
                                     result.targetAddress &&
                                     shortenId(result.targetAddress)}

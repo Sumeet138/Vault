@@ -14,6 +14,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useUser } from "@/providers/UserProvider";
 import { EMOJI_PICKS, COLOR_PICKS } from "@/config/styling";
 import { CHAINS, isTestnet, AVAILABLE_CHAINS } from "@/config/chains";
+import { uploadFiles } from "@/lib/supabase/storage";
 import {
   formatStringToNumericDecimals,
   serializeFormattedStringToFloat,
@@ -166,7 +167,7 @@ export const LinkFormProvider: React.FC<LinkFormProviderProps> = ({
   initialTemplate = null,
   linkId,
 }) => {
-  const { backendToken } = useAuth();
+  const { backendToken, me } = useAuth();
   const { refreshLinks, links, createLink } = useUser();
   const router = useRouter();
   const { trackPaymentLinkCreation, isPhotonAuthenticated } = usePhoton();
@@ -550,10 +551,10 @@ export const LinkFormProvider: React.FC<LinkFormProviderProps> = ({
       stableToken: stableToken,
       deliverableFiles: (linkData.files?.deliverables || []).map((file: any) => ({
         id: file.id,
-        name: file.filename,
-        size: file.size,
+        name: file.filename || file.name,
+        size: file.size || 0,
         isExisting: true,
-        url: getFileUrl(file.id),
+        url: file.url || getFileUrl(file.id), // Use URL directly if available, otherwise construct from ID
       })),
       deliveryUrl: linkData.deliveryUrl || "",
       thankYouMessage:
@@ -831,7 +832,72 @@ export const LinkFormProvider: React.FC<LinkFormProviderProps> = ({
         router.push(`/app/links/${linkId}`);
       } else {
         // Create new link - Backend-less mode
-        const newLink = await createLink(requestData);
+        // For digital products, upload files first if they exist
+        let uploadedDeliverables: any[] = [];
+        
+        if (selectedTemplate.id === "digital-product" && formData.deliverableFiles.length > 0) {
+          try {
+            console.log("📤 Uploading deliverable files to Supabase Storage...");
+            
+            // Filter out existing files (they already have URLs)
+            const newFiles = formData.deliverableFiles.filter(
+              (file) => !file.isExisting && file.file
+            );
+            
+            if (newFiles.length > 0) {
+              // Upload files to Supabase Storage
+              const filesToUpload = newFiles.map((f) => f.file!);
+              const folder = me?.id ? `users/${me.id}/deliverables` : 'deliverables';
+              
+              const uploadedFiles = await uploadFiles(filesToUpload, 'deliverables', folder);
+              
+              // Map uploaded files to deliverable format
+              uploadedDeliverables = uploadedFiles.map((uploaded, index) => ({
+                id: uploaded.id,
+                url: uploaded.url,
+                filename: uploaded.name,
+                size: uploaded.size,
+                contentType: uploaded.contentType,
+                type: 'deliverable',
+                category: null,
+              }));
+              
+              console.log(`✅ Successfully uploaded ${uploadedDeliverables.length} deliverable files`);
+            }
+            
+            // Include existing files (they already have URLs)
+            const existingFiles = formData.deliverableFiles
+              .filter((f) => f.isExisting && f.url)
+              .map((f) => ({
+                id: f.id,
+                url: f.url!,
+                filename: f.name,
+                size: f.size,
+                contentType: 'application/octet-stream',
+                type: 'deliverable',
+                category: null,
+              }));
+            
+            uploadedDeliverables = [...existingFiles, ...uploadedDeliverables];
+          } catch (uploadError) {
+            console.error("❌ Error uploading deliverable files:", uploadError);
+            throw new Error(
+              `Failed to upload deliverable files: ${
+                uploadError instanceof Error ? uploadError.message : "Unknown error"
+              }`
+            );
+          }
+        }
+        
+        // Add uploaded deliverables to requestData
+        const requestDataWithFiles = {
+          ...requestData,
+          ...(selectedTemplate.id === "digital-product" && uploadedDeliverables.length > 0 && {
+            deliverables: uploadedDeliverables,
+          }),
+        };
+        
+        const newLink = await createLink(requestDataWithFiles);
         
         if (!newLink) {
           throw new Error("Failed to create link");
@@ -881,6 +947,7 @@ export const LinkFormProvider: React.FC<LinkFormProviderProps> = ({
     }
   }, [
     backendToken,
+    me,
     formData,
     selectedEmoji,
     selectedColor,

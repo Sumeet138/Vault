@@ -731,6 +731,9 @@ export default function UserProvider({ children }: UserProviderProps) {
         // Generate linkPreview from username and tag
         const linkPreview = `/${me.username}${data.tag ? `/${data.tag}` : ""}`;
         
+        // Extract deliverables if present (for digital products)
+        const deliverables = (data as any).deliverables || [];
+        
         // Backend-less: Create link locally
         const newLink: Link = {
           ...data,
@@ -740,6 +743,10 @@ export default function UserProvider({ children }: UserProviderProps) {
           user: {
             id: me.id || "",
             username: me.username, // Always set user object
+          },
+          files: {
+            thumbnail: null,
+            deliverables: deliverables, // Store uploaded deliverable files
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -751,6 +758,11 @@ export default function UserProvider({ children }: UserProviderProps) {
             totalPayments: 0,
           },
         };
+        
+        // Log deliverables if present
+        if (deliverables.length > 0) {
+          console.log(`✅ Link created with ${deliverables.length} deliverable files`);
+        }
         
         console.log("✅ Creating link with linkPreview:", linkPreview, "for user:", me.username);
         

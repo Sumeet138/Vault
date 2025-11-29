@@ -472,7 +472,7 @@ export default function HeroSection() {
 
                 {/* Github Button */}
                 <a
-                  href="https://github.com/ayuxy027"
+                  href="https://github.com/Sumeet138/Vault"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group"

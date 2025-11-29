@@ -112,7 +112,7 @@ function TokenInput({
 
 
   useEffect(() => {
-    if (value !== undefined) {
+    if (value !== undefined && value !== null && value !== "") {
       setAmount(value);
     }
   }, [value]);
@@ -204,6 +204,13 @@ function TokenInput({
       return;
     }
 
+    // If we have a value prop set (controlled mode), don't emit null when token/amount is missing
+    // This prevents clearing RWA purchase values
+    if (value !== undefined && value !== null && value !== "" && (!selectedToken || !amount || amount === "0")) {
+      // Value is being controlled externally (e.g., RWA purchase), wait for token to be set
+      return;
+    }
+
     if (!selectedToken || !amount || amount === "0") {
       onChange(null);
       return;
@@ -229,7 +236,7 @@ function TokenInput({
     };
 
     onChange(output);
-  }, [selectedToken, amount, onChange, mode]);
+  }, [selectedToken, amount, onChange, mode, value]);
 
   // Memoize converted predefined tokens
   const convertedPredefinedTokens = useMemo(() => {
@@ -313,7 +320,13 @@ function TokenInput({
     setIsInitialLoad(true); // Reset for new chain
     setTokens([]);
     setSelectedToken(null);
-    setAmount("");
+    // Don't clear amount if value prop is provided (e.g., for RWA purchases)
+    if (value === undefined) {
+      setAmount("");
+    } else if (value) {
+      // Preserve the value if it's provided
+      setAmount(value);
+    }
     setError(null);
 
     // Small delay to show the switching state, then fetch
@@ -323,7 +336,7 @@ function TokenInput({
     }, 150);
 
     return () => clearTimeout(timeoutId);
-  }, [chain, address, defaultToken, mode]);
+  }, [chain, address, defaultToken, mode, value]);
 
   // Silent refresh for background updates (no loading states)
   const silentRefreshBalances = useCallback(async () => {

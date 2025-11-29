@@ -141,20 +141,53 @@ export default function PaymentInterface() {
         if (purchaseInfo && typeof purchaseInfo === 'object' && purchaseInfo.assetId && typeof purchaseInfo.totalCost === 'number') {
           setRwaPurchaseInfo(purchaseInfo);
           
-          // Pre-fill amount if matches the tag (always set for RWA purchases)
-          if (addressData?.linkData?.tag === purchaseInfo.assetId && purchaseInfo.totalCost) {
-            // Set the exact amount needed
-            setAmount(purchaseInfo.totalCost.toString());
+          // Always pre-fill amount for RWA purchases (don't require tag match)
+          // The payment link will be generated with the assetId as the tag
+          if (purchaseInfo.totalCost > 0) {
+            // Format the amount properly - preserve all significant digits
+            // For small amounts like 0.0096, show full precision
+            let formattedAmount: string;
             
-            // Set token to APT if not already set
-            if (!selectedToken) {
-              setSelectedToken({
-                symbol: 'APT',
-                decimals: 8,
-                isNative: true,
-                address: '0x1::aptos_coin::AptosCoin',
-              });
+            // If it's a decimal, ensure we show meaningful precision (up to 8 decimals)
+            if (purchaseInfo.totalCost < 1) {
+              // For amounts less than 1, show up to 8 decimal places, but don't remove trailing zeros if they're significant
+              formattedAmount = purchaseInfo.totalCost.toFixed(8);
+              // Only remove trailing zeros if there are more than 4 decimal places
+              if (formattedAmount.split('.')[1]?.length > 4) {
+                formattedAmount = formattedAmount.replace(/\.?0+$/, '');
+              }
+            } else {
+              // For amounts >= 1, show up to 6 decimal places
+              formattedAmount = purchaseInfo.totalCost.toFixed(6).replace(/\.?0+$/, '');
             }
+            
+            // Ensure we always have at least one digit after decimal if it's a decimal number
+            if (purchaseInfo.totalCost % 1 !== 0 && !formattedAmount.includes('.')) {
+              formattedAmount = purchaseInfo.totalCost.toFixed(8);
+            }
+            
+            // Ensure the formatted amount is not empty
+            if (!formattedAmount || formattedAmount === '0' || formattedAmount === '0.00') {
+              formattedAmount = purchaseInfo.totalCost.toFixed(8);
+            }
+            
+            // Always set token to APT for RWA purchases FIRST, then amount
+            // This ensures TokenInput has the token selected before amount is set
+            const aptToken = {
+              symbol: 'APT',
+              name: 'Aptos',
+              decimals: 8,
+              isNative: true,
+              address: '0x1::aptos_coin::AptosCoin',
+            };
+            console.log('🔄 Setting RWA token:', aptToken);
+            setSelectedToken(aptToken);
+            
+            // Use setTimeout to ensure token is set before amount (prevents TokenInput from emitting null)
+            setTimeout(() => {
+              console.log('🔄 Setting RWA amount:', { totalCost: purchaseInfo.totalCost, formattedAmount });
+              setAmount(formattedAmount);
+            }, 0);
           }
         } else {
           // Invalid purchase info, clear it
@@ -170,7 +203,7 @@ export default function PaymentInterface() {
         // Ignore storage errors
       }
     }
-  }, [addressData?.linkData?.tag, setAmount, selectedToken, setSelectedToken]);
+  }, [addressData, setAmount, setSelectedToken]);
 
   // Fetch balance for fixed token
   useEffect(() => {
@@ -247,7 +280,32 @@ export default function PaymentInterface() {
     (output: any) => {
       // This handler is for open payments only
       if (isFixedPrice) return;
+      
+      // For RWA purchases, only allow changes that match the RWA values
+      if (rwaPurchaseInfo && rwaPurchaseInfo.totalCost > 0) {
+        // Allow the onChange if it's setting the correct RWA values
+        if (output && 
+            output.amount === rwaPurchaseInfo.totalCost && 
+            output.token?.symbol === 'APT') {
+          // This is the correct RWA values, allow it
+          setAmount(output.rawAmount);
+          setSelectedToken({
+            symbol: output.token.symbol,
+            decimals: output.token.decimals,
+            isNative: output.token.isNative,
+            address: output.token.address,
+          });
+          return;
+        }
+        
+        // Block any other changes (clearing or different values)
+        if (!output || output.amount !== rwaPurchaseInfo.totalCost) {
+          console.log('🚫 Blocking TokenInput onChange for RWA purchase:', { rwaPurchaseInfo, output });
+          return;
+        }
+      }
 
+      // Normal flow for non-RWA purchases
       if (output) {
         setAmount(output.rawAmount);
         setSelectedToken({
@@ -257,11 +315,14 @@ export default function PaymentInterface() {
           address: output.token.address,
         });
       } else {
-        setAmount("");
-        setSelectedToken(null);
+        // Only clear if not an RWA purchase
+        if (!rwaPurchaseInfo) {
+          setAmount("");
+          setSelectedToken(null);
+        }
       }
     },
-    [isFixedPrice, setAmount, setSelectedToken]
+    [isFixedPrice, setAmount, setSelectedToken, rwaPurchaseInfo]
   );
 
   // Check if collect info is required and validate it
@@ -511,6 +572,7 @@ export default function PaymentInterface() {
                     chain={walletChain as any}
                     address={wallet.publicKey || ""}
                     defaultToken="APTOS"
+                    value={amount}
                     onChange={handleTokenInputChange}
                   />
                 ) : (
@@ -527,6 +589,7 @@ export default function PaymentInterface() {
                       },
                     ]}
                     defaultToken="APT"
+                    value={amount}
                     onChange={handleTokenInputChange}
                     isShowMax={false}
                   />

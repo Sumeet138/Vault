@@ -525,7 +525,10 @@ function PayContextProvider({
         } else {
           // Fallback: When no initial data is provided, default to Aptos chain
           // This can happen when loading a user's page before their data is fetched
-          console.warn("No initial data provided - defaulting to Aptos chain")
+          // Only log in development mode to reduce console noise
+          if (process.env.NODE_ENV === 'development') {
+            console.log("No initial data provided - defaulting to Aptos chain")
+          }
           if (!mounted) return
           setAvailableChains(["APTOS"])
           setSelectedChain("APTOS")

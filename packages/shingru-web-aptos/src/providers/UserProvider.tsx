@@ -357,6 +357,50 @@ export default function UserProvider({ children }: UserProviderProps) {
                 
                 if (result.success) {
                   console.log("✅ Payment saved and balance credited:", payment.transactionHash, "Amount:", payment.amount.toString());
+                  
+                  // Check if this is an RWA purchase
+                  if (payment.decryptedLabel) {
+                    try {
+                      // The label contains the link ID, we need to check if it's an RWA asset
+                      // For RWA, the link tag should match an assetId
+                      const storedLinks = localStorage.getItem("shingru-links");
+                      if (storedLinks) {
+                        const links = JSON.parse(storedLinks);
+                        const link = links.find((l: any) => l.id === payment.decryptedLabel);
+                        
+                        if (link && link.tag) {
+                          // Call API route to process RWA purchase (server-side)
+                          const rwaResponse = await fetch("/api/rwa/process-payment", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                              userId: me.id,
+                              linkTag: link.tag,
+                              transactionHash: payment.transactionHash,
+                              amount: payment.amount.toString(),
+                            }),
+                          });
+                          
+                          if (rwaResponse.ok) {
+                            const rwaData = await rwaResponse.json();
+                            if (rwaData.success) {
+                              console.log(`✅ RWA purchase processed: ${rwaData.data.quantity} shares of ${rwaData.data.assetId}`);
+                            } else {
+                              // Not an RWA purchase or processing failed - that's okay
+                              if (rwaData.error !== "Not an RWA asset") {
+                                console.error("❌ Error processing RWA purchase:", rwaData.error);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    } catch (rwaError) {
+                      console.error("❌ Error checking RWA purchase:", rwaError);
+                      // Don't fail the payment if RWA processing fails
+                    }
+                  }
                 } else {
                   console.error("❌ Error saving payment:", result.error);
                 }

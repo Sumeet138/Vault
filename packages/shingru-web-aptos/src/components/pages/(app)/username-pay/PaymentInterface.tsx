@@ -59,6 +59,12 @@ export default function PaymentInterface() {
   const [collectInfoErrors, setCollectInfoErrors] = useState({});
   const [fixedTokenBalance, setFixedTokenBalance] = useState<number | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [rwaPurchaseInfo, setRwaPurchaseInfo] = useState<{
+    assetId: string;
+    quantity: number;
+    totalCost: number;
+    pricePerShare: number;
+  } | null>(null);
 
   // Fundraisers should always allow open amounts, even with a goal
   const isFundraiser = addressData?.linkData?.template === "fundraiser";
@@ -78,6 +84,42 @@ export default function PaymentInterface() {
         isNative: chainDataForFixedPrice.mint.isNative,
       }
       : null;
+
+  // Check for RWA purchase intent from sessionStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const rwaIntent = sessionStorage.getItem('rwa-purchase-intent');
+      if (rwaIntent) {
+        const purchaseInfo = JSON.parse(rwaIntent);
+        setRwaPurchaseInfo(purchaseInfo);
+        
+        // Pre-fill amount if not already set and matches the tag
+        if (addressData?.linkData?.tag === purchaseInfo.assetId && !amount) {
+          // Convert APT to the format needed (assuming 8 decimals)
+          const amountInSmallestUnit = (purchaseInfo.totalCost * 1e8).toString();
+          setAmount(purchaseInfo.totalCost.toString());
+          
+          // Set token to APT if not already set
+          if (!selectedToken) {
+            setSelectedToken({
+              symbol: 'APT',
+              decimals: 8,
+              isNative: true,
+              address: '0x1::aptos_coin::AptosCoin',
+            });
+          }
+        }
+        
+        // Clear the intent after using it
+        sessionStorage.removeItem('rwa-purchase-intent');
+      }
+    } catch (error) {
+      console.error('Error reading RWA purchase intent:', error);
+      sessionStorage.removeItem('rwa-purchase-intent');
+    }
+  }, [addressData?.linkData?.tag, amount, setAmount, selectedToken, setSelectedToken]);
 
   // Fetch balance for fixed token
   useEffect(() => {
@@ -295,6 +337,31 @@ export default function PaymentInterface() {
     <>
       <AnimatePresence mode="wait">
         <div className="w-full max-w-lg mx-auto" key="payment-form">
+          {/* RWA Purchase Info */}
+          {rwaPurchaseInfo && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-800">
+                    Real World Asset Purchase
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Purchasing {rwaPurchaseInfo.quantity} share{rwaPurchaseInfo.quantity !== 1 ? 's' : ''} at {rwaPurchaseInfo.pricePerShare} APT per share
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Warning if wallet not set up */}
           {!hasWalletSetup && addressData && (
             <motion.div

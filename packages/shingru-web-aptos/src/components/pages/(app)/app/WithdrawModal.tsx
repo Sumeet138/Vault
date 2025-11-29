@@ -181,7 +181,7 @@ export default function WithdrawModal({
           </div>
         );
       case "username":
-      case "shingru":
+      case "vault":
         return (
           <EmojiPicture
             emoji={result.profileImageData.emoji}
@@ -213,7 +213,7 @@ export default function WithdrawModal({
         receiverDisplay = shortenId(selectedResult.address);
         break;
       case "username":
-      case "shingru":
+      case "vault":
         receiverDisplay = `@${selectedResult.username}`;
         break;
       case "ans":
@@ -511,7 +511,7 @@ export default function WithdrawModal({
                                   : result.type === "sns"
                                     ? result.name
                                     : result.type === "username" ||
-                                      result.type === "shingru"
+                                      result.type === "vault"
                                       ? result.username
                                       : result.address
                               }
@@ -535,8 +535,8 @@ export default function WithdrawModal({
                                   {result.type === "address" &&
                                     shortenId(result.address)}
                                   {(result.type === "username" ||
-                                    result.type === "shingru") &&
-                                    `shingru.me/${result.username}`}
+                                    result.type === "vault") &&
+                                    `vault-aptos.vercel.app/${result.username}`}
                                   {result.type === "ans" &&
                                     result.targetAddress &&
                                     shortenId(result.targetAddress)}
@@ -592,7 +592,7 @@ export default function WithdrawModal({
                     placeholder="0.00"
                   />
                   {selectedResult &&
-                    (selectedResult.type === "shingru" ||
+                    (selectedResult.type === "vault" ||
                       selectedResult.type === "username") && (
                       <div className="relative mt-4">
                         <div className="text-sm font-semibold opacity-60 mb-2">

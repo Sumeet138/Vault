@@ -533,7 +533,7 @@ function WelcomeScreen({
                 transition={{ delay: 0.05, duration: 0.5, type: "tween", ease: EASE_OUT_QUART }}
                 className="text-2xl font-bold text-center text-gray-900 mb-2 font-sans"
               >
-                Welcome to Shingru
+                Welcome to Vault
               </motion.h1>
               <motion.p
                 initial={!isMounted ? { y: 10, opacity: 0 } : {}}

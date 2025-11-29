@@ -11,17 +11,17 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Shingru - Get Paid, Stay Private",
+  title: "Vault - Get Paid, Stay Private",
   description:
     "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
   openGraph: {
-    title: "Shingru - Get Paid, Stay Private",
-    url: "https://shingru.me",
+    title: "Vault - Get Paid, Stay Private",
+    url: "https://vault-aptos.vercel.app",
     description:
       "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
   },
   twitter: {
-    title: "Shingru - Get Paid, Stay Private",
+    title: "Vault - Get Paid, Stay Private",
     description:
       "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
   },

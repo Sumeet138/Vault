@@ -669,7 +669,7 @@ export default function UserProvider({ children }: UserProviderProps) {
           return;
         }
         
-        // Ensure all links have user object and linkPreview populated
+        // Ensure all links have user object, linkPreview, and labels populated
         const normalizedLinks = links.map((link) => {
           // Generate linkPreview if missing
           if (!link.linkPreview || link.linkPreview.trim() === "") {
@@ -685,6 +685,16 @@ export default function UserProvider({ children }: UserProviderProps) {
               id: me?.id || "",
               username: me?.username || "",
             };
+          }
+          
+          // Ensure labels array exists
+          if (!link.labels || !Array.isArray(link.labels)) {
+            link.labels = [];
+          }
+          
+          // Ensure payment status exists, default to "pending"
+          if (!link.paymentStatus) {
+            link.paymentStatus = "pending";
           }
           
           return link;
@@ -733,6 +743,10 @@ export default function UserProvider({ children }: UserProviderProps) {
         
         // Extract deliverables if present (for digital products)
         const deliverables = (data as any).deliverables || [];
+        // Extract labels if present
+        const labels = (data as any).labels || [];
+        // Extract payment status, default to "pending"
+        const paymentStatus = (data as any).paymentStatus || "pending";
         
         // Backend-less: Create link locally
         const newLink: Link = {
@@ -748,6 +762,8 @@ export default function UserProvider({ children }: UserProviderProps) {
             thumbnail: null,
             deliverables: deliverables, // Store uploaded deliverable files
           },
+          labels: labels, // Store labels
+          paymentStatus: paymentStatus, // Store payment status
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           status: "ACTIVE",
@@ -798,11 +814,15 @@ export default function UserProvider({ children }: UserProviderProps) {
         const linkIndex = links.findIndex((link: Link) => link.id === id);
         if (linkIndex === -1) return null;
         
-        links[linkIndex] = {
+        // Preserve labels if not provided in update
+        const updatedLink = {
           ...links[linkIndex],
           ...data,
+          labels: (data as any).labels !== undefined ? (data as any).labels : links[linkIndex].labels,
           updatedAt: new Date().toISOString(),
         };
+        
+        links[linkIndex] = updatedLink;
         
         localStorage.setItem("shingru-links", JSON.stringify(links));
         await refreshLinks();

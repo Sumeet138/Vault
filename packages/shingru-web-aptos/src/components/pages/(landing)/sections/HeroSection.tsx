@@ -404,7 +404,7 @@ export default function HeroSection() {
                     </motion.span>
                   </motion.div>
                   <div className="text-gray-500 font-medium text-sm md:text-base whitespace-nowrap">
-                    shingru.me /{" "}
+                    vault-aptos.vercel.app /{" "}
                     <span className="inline-flex items-center align-bottom">
                       <motion.span
                         className="inline-block overflow-hidden"

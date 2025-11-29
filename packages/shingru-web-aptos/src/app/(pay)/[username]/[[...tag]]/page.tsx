@@ -17,7 +17,7 @@ export const generateMetadata = async ({
 
   if (response.error || !response.data) {
     return {
-      title: "Page Not Found - SHINGRU",
+      title: "Page Not Found - Vault",
     };
   }
 
@@ -26,12 +26,12 @@ export const generateMetadata = async ({
   const pageTitle = linkData
     ? `"${linkData.label}" by @${userData.username}`
     : `Pay @${userData.username} with crypto`;
-  const title = `${pageTitle} | SHINGRU`;
+  const title = `${pageTitle} | Vault`;
 
   const description = linkData
     ? linkData.description ||
-      `Make a payment for "${linkData.label}" to @${userData.username} through a SHINGRU link.`
-    : `Send cryptocurrency to @${userData.username} quickly and securely with SHINGRU.`;
+      `Make a payment for "${linkData.label}" to @${userData.username} through a Vault link.`
+    : `Send cryptocurrency to @${userData.username} quickly and securely with Vault.`;
 
   return {
     title,
@@ -40,7 +40,7 @@ export const generateMetadata = async ({
       title,
       description,
       url: `/${username}${tag ? `/${tag}` : ""}`,
-      siteName: "SHINGRU",
+      siteName: "Vault",
       type: "website",
     },
     twitter: {

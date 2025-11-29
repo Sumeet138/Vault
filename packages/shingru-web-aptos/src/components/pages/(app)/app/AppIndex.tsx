@@ -134,7 +134,7 @@ export default function AppHome() {
             >
               {/* Logo Section */}
               <div className="flex justify-center">
-                <div className="text-3xl font-bold text-gray-900">shingru</div>
+                <div className="text-3xl font-bold text-gray-900">vault</div>
               </div>
 
               {/* Description */}

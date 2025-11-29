@@ -337,7 +337,7 @@ export default function QRModal({
                 }}
                 className="text-xl font-bold text-gray-900 opacity-40"
               >
-                shingru
+                vault
               </motion.div>
             </motion.div>
           </motion.div>

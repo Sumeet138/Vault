@@ -92,6 +92,8 @@ export interface Link {
   };
   activities: Activity[];
   linkPreview: string;
+  labels?: string[]; // Custom labels/tags for organizing links (e.g., "payments done", "created", "expired")
+  paymentStatus?: "pending" | "paid" | "unpaid" | "expired" | "active"; // Payment status for the link
   stats: {
     viewCount: number;
     totalPayments: number;
@@ -113,10 +115,13 @@ export interface CreateLinkRequest {
     ChainConfig,
     "id" | "linkId" | "createdAt" | "updatedAt" | "mintId"
   >[];
+  labels?: string[]; // Optional labels for organizing links
+  paymentStatus?: "pending" | "paid" | "unpaid" | "expired" | "active"; // Payment status
 }
 
 export interface UpdateLinkRequest extends Partial<CreateLinkRequest> {
   isActive?: boolean;
+  labels?: string[]; // Labels can be updated
 }
 
 export const linksService = {

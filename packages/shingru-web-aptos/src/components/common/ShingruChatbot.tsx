@@ -368,17 +368,17 @@ const ShingruChatbot: React.FC = () => {
   const getSampleQuestions = (): string[] => {
     const questions: Record<string, string[]> = {
       en: [
-        "What is Shingru?",
+        "What is Vault?",
         "How do stealth addresses work?",
         "How do I receive payments?",
       ],
       hi: [
-        "Shingru क्या है?",
+        "Vault क्या है?",
         "स्टेल्थ एड्रेस कैसे काम करते हैं?",
         "मैं भुगतान कैसे प्राप्त करूं?",
       ],
       bn: [
-        "Shingru কি?",
+        "Vault কি?",
         "স্টেলথ অ্যাড্রেস কিভাবে কাজ করে?",
         "আমি কিভাবে পেমেন্ট পাব?",
       ],
@@ -395,9 +395,9 @@ const ShingruChatbot: React.FC = () => {
 
   const getPlaceholderText = (): string => {
     const placeholders: Record<string, string> = {
-      en: "Ask about Shingru...",
-      hi: "Shingru के बारे में पूछें...",
-      bn: "Shingru সম্পর্কে জিজ্ঞাসা করুন...",
+      en: "Ask about Vault...",
+      hi: "Vault के बारे में पूछें...",
+      bn: "Vault সম্পর্কে জিজ্ঞাসা করুন...",
     }
     return placeholders[selectedLanguage] || placeholders["en"]
   }
@@ -447,7 +447,7 @@ const ShingruChatbot: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">
-                    Shingru Assistant
+                    Vault Assistant
                   </h3>
                   <p className="text-xs text-gray-500">
                     Privacy-first payments
@@ -527,7 +527,7 @@ const ShingruChatbot: React.FC = () => {
                     transition={{ delay: 0.1, duration: 0.4 }}
                   />
                   <h4 className="font-semibold text-gray-800 mb-2">
-                    Welcome to Shingru!
+                    Welcome to Vault!
                   </h4>
                   <p className="text-sm text-gray-500 text-center px-4">
                     Ask me anything about privacy-first payments on Aptos.

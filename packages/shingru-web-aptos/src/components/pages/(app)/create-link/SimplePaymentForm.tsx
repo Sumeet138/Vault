@@ -6,6 +6,7 @@ import CollectInfoOption from "./CollectInfoOption";
 import AmountOption from "./AmountOption";
 import LinkNameStyleInput from "./LinkNameStyleInput";
 import SelectChainOption from "./SelectChainOption";
+import StatusSelector from "./StatusSelector";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/providers/UserProvider";
@@ -109,6 +110,10 @@ export default function SimplePaymentForm() {
           supportedChains={formData.supportedChains}
           availableChains={AVAILABLE_CHAINS as any}
         />
+      </FormSection>
+
+      <FormSection title="Payment Status">
+        <StatusSelector />
       </FormSection>
 
       <FormSection title="Advanced">

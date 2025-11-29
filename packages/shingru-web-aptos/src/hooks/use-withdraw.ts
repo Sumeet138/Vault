@@ -125,11 +125,11 @@ export function useWithdraw({ token, initialSearchQuery }: UseWithdrawArgs) {
 
         // Auto-select if it's a Vault link and we found exactly one result
         const vaultLinkRegex =
-          /^https?:\/\/vault\.me\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
+          /^https?:\/\/vault-aptos\.vercel\.app\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
         if (vaultLinkRegex.test(debouncedSearchQuery) && results.length === 1) {
           const result = results[0];
-          // Only auto-select if it's a shingru type result
-          if (result.type === "shingru" || result.type === "username") {
+          // Only auto-select if it's a vault type result
+          if (result.type === "vault" || result.type === "username") {
             handleResultSelect(result);
           }
         }
@@ -248,10 +248,10 @@ export function useWithdraw({ token, initialSearchQuery }: UseWithdrawArgs) {
     } else if (selectedResult.type === "ans") {
       recipient = selectedResult.targetAddress;
     } else if (
-      selectedResult.type === "shingru" ||
+      selectedResult.type === "vault" ||
       selectedResult.type === "username"
     ) {
-      // Use username for Shingru-to-Shingru transfers
+      // Use username for Vault-to-Vault transfers
       recipient = selectedResult.username;
     } else {
       setError("Withdrawing to this destination is not yet supported.");

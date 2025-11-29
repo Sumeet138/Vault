@@ -100,8 +100,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Payment recording error:', error);
+    // Ensure we always return JSON, even on errors
+    const errorMessage = error?.message || error?.toString() || 'Internal server error';
+    // Check if error message contains "Per anonym" or similar PostgreSQL errors
+    if (errorMessage.includes('Per anonym') || errorMessage.includes('permission denied')) {
+      console.error('Database permission error detected:', errorMessage);
+      return NextResponse.json(
+        { error: 'Database access error. Please contact support.', details: 'Permission denied' },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

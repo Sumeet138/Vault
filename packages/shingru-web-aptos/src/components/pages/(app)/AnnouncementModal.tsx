@@ -25,7 +25,7 @@ export default function AnnouncementModal({ isOpen, onClose }: AnnouncementModal
         {/* Hero Section */}
         <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-6 text-center border border-primary-200">
           <div className="inline-flex items-center justify-center w-16 h-16 b-4">
-            <div className="text-3xl font-bold text-gray-900">shingru</div>
+            <div className="text-3xl font-bold text-gray-900">vault</div>
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">
             VAULT × APTOS

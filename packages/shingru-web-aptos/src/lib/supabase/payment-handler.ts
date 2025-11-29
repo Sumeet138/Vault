@@ -50,6 +50,10 @@ export async function savePaymentAndCreditBalance(
 
     if (checkError && checkError.code !== 'PGRST116') {
       console.error('Error checking payment:', checkError);
+      // Handle PostgreSQL permission errors
+      if (checkError.message?.includes('Per anonym') || checkError.message?.includes('permission denied')) {
+        return { success: false, error: 'Database permission error. Please check your Supabase configuration.' };
+      }
       return { success: false, error: checkError.message };
     }
 
@@ -104,6 +108,10 @@ export async function savePaymentAndCreditBalance(
 
     if (insertError) {
       console.error('Error inserting payment:', insertError);
+      // Handle PostgreSQL permission errors
+      if (insertError.message?.includes('Per anonym') || insertError.message?.includes('permission denied')) {
+        return { success: false, error: 'Database permission error. Please check your Supabase configuration.' };
+      }
       return { success: false, error: insertError.message };
     }
 

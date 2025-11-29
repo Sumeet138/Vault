@@ -89,6 +89,8 @@ export interface FormData {
   thankYouMessage: string;
   // Fundraising specific
   goalAmount: string;
+  // Payment status
+  paymentStatus: "pending" | "paid" | "unpaid" | "expired" | "active";
 }
 
 export interface LinkFormContextType {
@@ -204,6 +206,8 @@ export const LinkFormProvider: React.FC<LinkFormProviderProps> = ({
       "Thank you for your purchase! Your digital files are attached to this email. If you have any questions, feel free to reach out to me.",
     // Fundraising specific
     goalAmount: "",
+    // Payment status - default to "pending"
+    paymentStatus: "pending",
   });
 
   // Form submission state
@@ -750,6 +754,7 @@ export const LinkFormProvider: React.FC<LinkFormProviderProps> = ({
         tag: slug,
         label: formData.name,
         description: formData.description || undefined,
+        paymentStatus: formData.paymentStatus || "pending",
         specialTheme: "default",
         template: selectedTemplate.id,
         amountType: formData.pricingType,

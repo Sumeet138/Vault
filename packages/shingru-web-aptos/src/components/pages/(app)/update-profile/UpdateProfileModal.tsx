@@ -233,7 +233,7 @@ export default function UpdateProfileModal({
               </Label>
               <div className="relative flex items-center">
                 <span className="absolute left-5 z-10 font-semibold text-sm text-gray-500 rounded-full top-1/2 -translate-y-1/2">
-                  shingru.me/
+                  vault-aptos.vercel.app/
                 </span>
                 <Input
                   id="username"

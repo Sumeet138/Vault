@@ -2,7 +2,7 @@ import CreateLinkIndex from "@/components/pages/(app)/create-link/CreateLinkInde
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Create Link - SHINGRU",
+  title: "Create Link - Vault",
 };
 
 export default function CreateLinkPage() {

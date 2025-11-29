@@ -150,9 +150,9 @@ function BalanceCard() {
   const processQRCode = (code: string): string | null => {
     const trimmedCode = code.trim();
 
-    // Case 1: Shingru link (https://shingru.me/username or https://shingru.me/username/anything)
-    const shingruLinkRegex = /^https?:\/\/shingru\.me\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
-    if (shingruLinkRegex.test(trimmedCode)) {
+    // Case 1: Vault link (https://vault-aptos.vercel.app/username or https://vault-aptos.vercel.app/username/anything)
+    const vaultLinkRegex = /^https?:\/\/vault-aptos\.vercel\.app\/[a-zA-Z0-9_.-]+(?:\/.*)?$/i;
+    if (vaultLinkRegex.test(trimmedCode)) {
       return trimmedCode; // Return full URL
     }
 

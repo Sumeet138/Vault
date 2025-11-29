@@ -55,7 +55,7 @@ function PayPageContent() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4 md:px-8 bg-background py-8 ">
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-          <div className="text-2xl font-bold text-gray-900">shingru</div>
+          <div className="text-2xl font-bold text-gray-900">vault</div>
         </div>
 
         {/* Error Icon */}
@@ -133,7 +133,7 @@ function PayPageContent() {
               transition={{ duration: 0.4 }}
               className="mb-4 flex justify-center"
             >
-              <div className="text-2xl font-bold text-gray-900">shingru</div>
+              <div className="text-2xl font-bold text-gray-900">vault</div>
             </motion.div>
 
             {/* Link Information Card */}
@@ -297,7 +297,7 @@ function PayPageContent() {
                   }}
                   className="mb-6"
                 >
-                  <div className="text-4xl font-bold text-gray-900">shingru</div>
+                  <div className="text-4xl font-bold text-gray-900">vault</div>
                 </motion.div>
 
                 <motion.div

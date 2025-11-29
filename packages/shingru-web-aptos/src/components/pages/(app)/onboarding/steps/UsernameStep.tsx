@@ -247,7 +247,7 @@ export function UsernameStep({
         <div className="w-full space-y-2">
           <div className="relative flex items-center">
             <span className="absolute left-5 z-10 font-semibold text-gray-500 pointer-events-none select-none">
-              shingru.me/
+              vault-aptos.vercel.app/
             </span>
             <Input
               id="username"

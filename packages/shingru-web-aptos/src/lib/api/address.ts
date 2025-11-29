@@ -74,10 +74,10 @@ export interface AddressResult {
 }
 
 export interface PivyResult {
-  type: "shingru";
+  type: "vault";
   username: string;
   displayName: string;
-  displayType: "SHINGRU";
+  displayType: "VAULT";
   profileImageType: string;
   profileImageData: {
     emoji: string;

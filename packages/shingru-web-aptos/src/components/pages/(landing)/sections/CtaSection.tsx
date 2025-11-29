@@ -94,7 +94,7 @@ const PaymentLinkPill = ({
       <span>{emoji}</span>
     </div>
     <p>
-      <span className="text-gray-500">shingru.me /</span>{" "}
+      <span className="text-gray-500">vault-aptos.vercel.app /</span>{" "}
       <span className="font-semibold text-black">{name}</span>{" "}
       <span className="text-gray-500">/ {role}</span>
     </p>

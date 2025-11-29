@@ -73,7 +73,7 @@ const TagAvailable = ({ tagId }: { tagId: string }) => {
         <div className="bg-white rounded-3xl shadow-supa-smooth p-8">
           <div className="flex flex-col items-center space-y-8">
             <div className="flex flex-col items-center space-y-6">
-              <div className="text-4xl font-bold text-gray-900">shingru</div>
+              <div className="text-4xl font-bold text-gray-900">vault</div>
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
                   Claim this NFC tag! 🏷️

@@ -27,11 +27,11 @@ const ROW_B: LinkItem[] = [
 ];
 
 function LinkPill({ item }: { item: LinkItem }) {
-  const href = `shingru.me/${item.username}${item.path ? `/${item.path}` : ""}`;
+  const href = `https://vault-aptos.vercel.app/${item.username}${item.path ? `/${item.path}` : ""}`;
   return (
     <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-background-50 px-4 py-2 select-none">
       <EmojiPicture emoji={item.emoji} size="sm" color="blue" />
-      <span className="text-foreground/50 text-base">shingru.me/</span>
+      <span className="text-foreground/50 text-base">vault-aptos.vercel.app/</span>
       <span className="text-foreground text-base font-semibold">
         {item.username}
       </span>

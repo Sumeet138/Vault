@@ -13,18 +13,45 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
+import LabelBadge from "@/components/common/LabelBadge";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 export default function Links() {
   const { links, showArchivedLinks, setShowArchivedLinks } = useUser();
   const [selectedLinkForQR, setSelectedLinkForQR] = useState<Link | null>(null);
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const router = useRouter();
   const isMobile = useIsMobile();
+
+  // Get all unique labels from all links
+  const allLabels = Array.from(
+    new Set(
+      links
+        .flatMap((link) => link.labels || [])
+        .filter((label) => label && label.trim() !== "")
+    )
+  ).sort();
 
   // Get archived links
   const archivedLinks = links.filter((link) => link.status === "ARCHIVED");
   const archivedCount = archivedLinks.length;
+
+  // Filter links by selected label
+  const getFilteredLinks = () => {
+    let filtered = links.filter((link) => link.status !== "ARCHIVED");
+    
+    if (selectedLabel) {
+      filtered = filtered.filter(
+        (link) => link.labels && link.labels.includes(selectedLabel)
+      );
+    }
+    
+    return filtered;
+  };
+
+  const filteredLinks = getFilteredLinks();
 
   // Handle QR code button - opens modal for specific link
   const handleQRClick = (link: Link) => {
@@ -65,6 +92,37 @@ export default function Links() {
         {/* Mobile Header */}
 
         <div className="pb-[12rem]">
+          {/* Label Filter */}
+          {allLabels.length > 0 && (
+            <div className="mb-4 pt-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-gray-500">Filter by:</span>
+                {selectedLabel && (
+                  <button
+                    onClick={() => setSelectedLabel(null)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 transition-colors"
+                  >
+                    <span>All Links</span>
+                    <XMarkIcon className="w-3 h-3" />
+                  </button>
+                )}
+                {allLabels.map((label) => (
+                  <button
+                    key={label}
+                    onClick={() => setSelectedLabel(selectedLabel === label ? null : label)}
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                      selectedLabel === label
+                        ? "bg-blue-100 text-blue-700 border border-blue-300"
+                        : "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid md:grid-cols-2 gap-3 pt-3">
             <div
               onClick={handleCreateLink}
@@ -80,16 +138,25 @@ export default function Links() {
                 </span>
               </div>
             </div>
-            {links
-              .filter((link) => link.status !== "ARCHIVED")
-              .map((link) => (
-                <LinkCard
-                  key={link.id}
-                  link={link}
-                  onQRClick={handleQRClick}
-                  variant={isMobile ? "row" : "card"}
-                />
-              ))}
+            {filteredLinks.map((link) => (
+              <LinkCard
+                key={link.id}
+                link={link}
+                onQRClick={handleQRClick}
+                variant={isMobile ? "row" : "card"}
+              />
+            ))}
+            {filteredLinks.length === 0 && selectedLabel && (
+              <div className="col-span-2 text-center py-8 text-gray-500">
+                <p>No links found with label "{selectedLabel}"</p>
+                <button
+                  onClick={() => setSelectedLabel(null)}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Show all links
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Archived Links Button */}

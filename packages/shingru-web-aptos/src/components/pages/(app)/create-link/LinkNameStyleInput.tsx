@@ -52,8 +52,8 @@ export default function LinkNameStyleInput({
   const urlPreview = useMemo(
     () =>
       name
-        ? `shingru.me/${username || "username"}/${generateSlug(name)}`
-        : `shingru.me/${username || "username"}/your-link-name`,
+        ? `vault-aptos.vercel.app/${username || "username"}/${generateSlug(name)}`
+        : `vault-aptos.vercel.app/${username || "username"}/your-link-name`,
     [name, username, generateSlug]
   );
 

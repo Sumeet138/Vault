@@ -5,16 +5,24 @@ import { Link } from "@/lib/api/links";
 import CuteCard from "@/components/common/CuteCard";
 import EmojiPicture from "@/components/common/EmojiPicture";
 import TemplatePill from "@/components/common/TemplatePill";
+import LabelBadge from "@/components/common/LabelBadge";
+import StatusBadge from "@/components/common/StatusBadge";
 import {
   CheckCircleIcon,
-  EyeIcon,
   LinkIcon,
   QrCodeIcon,
   Square2StackIcon,
-  WalletIcon,
+  TagIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { COLOR_PICKS } from "@/config/styling";
-import { formatUiNumber } from "@/utils/formatting";
+import { useUser } from "@/providers/UserProvider";
+import LabelManager from "./LabelManager";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface LinkCardProps {
   link: Link;
@@ -29,6 +37,8 @@ export default function LinkCard({
 }: LinkCardProps) {
   const router = useRouter();
   const [isCopied, setIsCopied] = useState(false);
+  const { updateLink } = useUser();
+  const [isLabelManagerOpen, setIsLabelManagerOpen] = useState(false);
 
   // Generate link preview path - fallback to constructing from username and tag
   const linkPreviewPath = (link.linkPreview && link.linkPreview.trim() !== "") 
@@ -70,8 +80,8 @@ export default function LinkCard({
     try {
       // Try modern clipboard API first (requires secure context and user gesture)
       if (navigator.clipboard && navigator.clipboard.writeText && isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(linkUrl);
+    try {
+      await navigator.clipboard.writeText(linkUrl);
           console.log("✅ Successfully copied to clipboard");
           setIsCopied(true);
           setTimeout(() => setIsCopied(false), 2000);
@@ -106,8 +116,8 @@ export default function LinkCard({
       
       if (successful) {
         console.log("✅ Successfully copied using fallback method");
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
       } else {
         console.error("❌ Fallback copy method failed - execCommand returned false");
         alert(`Failed to copy link. Please copy manually:\n${linkUrl}`);
@@ -127,6 +137,15 @@ export default function LinkCard({
   // Handle card click to navigate to link details
   const handleCardClick = () => {
     router.push(`/app/links/${link.id}`);
+  };
+
+  // Handle labels update
+  const handleLabelsChange = async (newLabels: string[]) => {
+    try {
+      await updateLink(link.id, { labels: newLabels } as any);
+    } catch (error) {
+      console.error("Failed to update labels:", error);
+    }
   };
 
   if (variant === "row") {
@@ -155,33 +174,28 @@ export default function LinkCard({
                 <div className="text-xs text-black/50 line-clamp-1 overflow-hidden text-ellipsis">
                   {link.description}
                 </div>
+                {/* Labels */}
+                {link.labels && link.labels.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                    {link.labels.slice(0, 2).map((label) => (
+                      <LabelBadge key={label} label={label} variant="compact" />
+                    ))}
+                    {link.labels.length > 2 && (
+                      <span className="text-xs text-gray-400">
+                        +{link.labels.length - 2}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Right side - Stats and template stacked vertically */}
-            <div className="flex items-center gap-4 flex-shrink-0">
-              {/* Stats */}
-              <div className="hidden sm:flex flex-row items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <EyeIcon className="w-4 h-4 text-black/40" />
-                  <span className="text-sm text-black/60 font-semibold">
-                    {formatUiNumber(link.stats?.viewCount ?? 0, "", {
-                      maxDecimals: 0,
-                      humanize: true,
-                      humanizeThreshold: 1000,
-                    })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <WalletIcon className="w-4 h-4 text-black/40" />
-                  <span className="text-sm text-black/60 font-semibold">
-                    {formatUiNumber(link.stats?.totalPayments ?? 0, "", {
-                      maxDecimals: 0,
-                      humanize: true,
-                    })}
-                  </span>
-                </div>
-              </div>
+            {/* Right side - Status and template */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Status Badge */}
+              {link.paymentStatus && (
+                <StatusBadge status={link.paymentStatus} size="sm" />
+              )}
               {/* Template pill */}
               <TemplatePill template={link.template} />
             </div>
@@ -243,6 +257,44 @@ export default function LinkCard({
                 </AnimatePresence>
               </button>
 
+              <Popover open={isLabelManagerOpen} onOpenChange={setIsLabelManagerOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLabelManagerOpen(true);
+                    }}
+                    className="w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors"
+                    type="button"
+                  >
+                    <TagIcon className="size-4 opacity-50" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-80 bg-white rounded-2xl shadow-lg p-4 border-gray-200"
+                  align="end"
+                  sideOffset={4}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-900">Manage Labels</h3>
+                      <button
+                        onClick={() => setIsLabelManagerOpen(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                        type="button"
+                      >
+                        <XMarkIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <LabelManager
+                      labels={link.labels || []}
+                      onLabelsChange={handleLabelsChange}
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
+
               <button
                 onClick={handleQRClick}
                 className="w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors"
@@ -259,36 +311,12 @@ export default function LinkCard({
   return (
     <CuteCard color={link.backgroundColor}>
       <div className="relative">
-        {/* Floating template pill */}
-        <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-0.5">
+        {/* Floating status badge and template pill */}
+        <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+          {link.paymentStatus && (
+            <StatusBadge status={link.paymentStatus} size="sm" animated />
+          )}
           <TemplatePill template={link.template} color={link.backgroundColor} />
-          {/* Stats */}
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="tooltip">
-              <div className="tooltip-content text-[10px]">Views</div>
-              <div className="flex items-center gap-1">
-                <EyeIcon className="w-3 h-3 md:w-4 md:h-4 text-gray-400 stroke-2" />
-                <div className="text-xs md:text-sm text-gray-400 font-semibold">
-                  {formatUiNumber(link.stats?.viewCount ?? 0, "", {
-                    maxDecimals: 0,
-                    humanize: true,
-                    humanizeThreshold: 1000,
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="tooltip">
-              <div className="tooltip-content text-[10px]">Payments</div>
-              <div className="flex items-center gap-1">
-                <WalletIcon className="w-3 h-3 md:w-4 md:h-4 text-gray-400 stroke-2" />
-                <div className="text-xs md:text-sm text-gray-400 font-semibold">
-                  {formatUiNumber(link.stats?.totalPayments ?? 0, "", {
-                    maxDecimals: 0,
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div
@@ -310,9 +338,22 @@ export default function LinkCard({
               <div className="font-semibold capitalize text-sm md:text-base lg:text-lg line-clamp-2 leading-tight mb-1">
                 {link.label}
               </div>
-              <div className="text-xs md:text-sm text-black/50 line-clamp-2 leading-relaxed">
+              <div className="text-xs md:text-sm text-black/50 line-clamp-2 leading-relaxed mb-2">
                 {link.description}
               </div>
+              {/* Labels */}
+              {link.labels && link.labels.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                  {link.labels.slice(0, 3).map((label) => (
+                    <LabelBadge key={label} label={label} variant="compact" />
+                  ))}
+                  {link.labels.length > 3 && (
+                    <span className="text-xs text-gray-400">
+                      +{link.labels.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -329,6 +370,44 @@ export default function LinkCard({
             </div>
 
             <div className="hidden md:flex flex-row items-center gap-0.5 md:gap-1 ml-2">
+              <Popover open={isLabelManagerOpen} onOpenChange={setIsLabelManagerOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLabelManagerOpen(true);
+                    }}
+                    className="cursor-pointer w-8 h-8 md:w-7 md:h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors touch-manipulation"
+                    type="button"
+                  >
+                    <TagIcon className="w-3.5 h-3.5 md:w-4 md:h-4 opacity-50 stroke-2" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-80 bg-white rounded-2xl shadow-lg p-4 border-gray-200"
+                  align="end"
+                  sideOffset={4}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-900">Manage Labels</h3>
+                      <button
+                        onClick={() => setIsLabelManagerOpen(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                        type="button"
+                      >
+                        <XMarkIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <LabelManager
+                      labels={link.labels || []}
+                      onLabelsChange={handleLabelsChange}
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
+
               <button
                 onClick={(e) => handleCopyLink(e)}
                 disabled={isCopied || !linkPreviewPath}

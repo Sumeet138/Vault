@@ -259,6 +259,8 @@ export default function AptosPayButton({
           console.error('Payment recording failed with status:', recordResponse.status);
           console.error('Error response:', errorText);
           // Payment succeeded but recording failed - should be handled by monitoring
+          // Don't show error to user, payment was successful
+          onSuccess?.(response.hash);
           return;
         }
 
@@ -268,17 +270,24 @@ export default function AptosPayButton({
           const responseText = await recordResponse.text();
           console.error('Payment recording returned non-JSON response:', responseText);
           // Payment succeeded but recording failed - should be handled by monitoring
+          // Don't show error to user, payment was successful
+          onSuccess?.(response.hash);
           return;
         }
 
         let recordResult;
         try {
           recordResult = await recordResponse.json();
-        } catch (jsonError) {
-          const responseText = await recordResponse.text();
+        } catch (jsonError: any) {
+          // If JSON parsing fails, log it but don't show error to user
+          // The response body has already been consumed, so we can't read it again
           console.error('Failed to parse payment recording response as JSON:', jsonError);
-          console.error('Response text:', responseText);
+          console.error('This usually means the API returned a non-JSON error response');
           // Payment succeeded but recording failed - should be handled by monitoring
+          // Don't show error to user, payment was successful
+          // Clear any error state to prevent showing the error
+          setError(null);
+          onSuccess?.(response.hash);
           return;
         }
         
@@ -289,11 +298,17 @@ export default function AptosPayButton({
         } else {
           console.log('Payment recorded successfully:', recordResult.paymentId);
         }
-      } catch (recordError) {
+      } catch (recordError: any) {
+        // Catch any errors during payment recording (network, parsing, etc.)
         console.error('Error recording payment:', recordError);
         // Payment succeeded but recording failed - should be handled by monitoring
+        // Don't show error to user, payment was successful
+        // Always clear error state to prevent showing recording errors
+        setError(null);
       }
 
+      // Always call onSuccess - payment transaction was successful
+      // Recording errors are logged but don't affect the user experience
       onSuccess?.(response.hash);
     } catch (error: any) {
       console.error("Payment failed:", error);

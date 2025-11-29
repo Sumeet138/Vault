@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
-import "@/assets/fonts/fonts.css";
-import "./globals.css";
-import RootProvider from "@/providers/RootProvider";
-import { Inter } from "next/font/google";
+import type { Metadata } from "next"
+import "@/assets/fonts/fonts.css"
+import "./globals.css"
+import RootProvider from "@/providers/RootProvider"
+import { Inter } from "next/font/google"
+import ShingruChatbot from "@/components/common/ShingruChatbot"
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-geist-mono",
-});
+})
 
 export const metadata: Metadata = {
   title: "Shingru - Get Paid, Stay Private",
@@ -42,12 +43,12 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-touch-icon.png",
   },
-};
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en">
@@ -85,7 +86,8 @@ export default function RootLayout({
       </head>
       <body className={`antialiased ${inter.variable}`}>
         <RootProvider>{children}</RootProvider>
+        <ShingruChatbot />
       </body>
     </html>
-  );
+  )
 }

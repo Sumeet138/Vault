@@ -1,0 +1,17 @@
+{
+  "name": "shingru-aptos",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "bun run test --workspaces",
+    "program": "bun run --filter packages/shingru-stealth-program-aptos",
+    "web": "bun run --filter packages/shingru-web-aptos"
+  },
+  "devDependencies": {},
+  "dependencies": {
+    "@noble/ciphers": "^2.0.1"
+  }
+}

@@ -1,0 +1,18 @@
+# Nixpacks config for monorepo deployment
+# Backend deployment configuration
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "openssl", "python3", "gcc", "gnumake"]
+
+[phases.install]
+cmds = [
+  "npm install --include=optional --workspaces"
+]
+
+[phases.build]
+cmds = [
+  "cd packages/pivy-backend-iota && npx prisma generate"
+]
+
+[start]
+cmd = "cd packages/pivy-backend-iota && node index.js"

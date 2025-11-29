@@ -1,0 +1,16 @@
+[package]
+name = "shingru_stealth"
+version = "1.0.0"
+license = "Apache-2.0"
+authors = ["Shingru Contributors"]
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework", rev = "mainnet" }
+
+[addresses]
+shingru_stealth = "0x164a880851f508334cc3d1583e92add6e7e3b8adda5182cb652e1032f485a96e"
+
+[dev-dependencies]
+
+[dev-addresses]
+

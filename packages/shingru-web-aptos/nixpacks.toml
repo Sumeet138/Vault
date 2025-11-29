@@ -1,0 +1,17 @@
+# nixpacks.toml
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "python3", "gcc", "gnumake", "openssl"]
+
+[phases.install]
+cmds = [
+  "npm install --include=optional"
+]
+
+[phases.build]
+cmds = [
+  "npm run build"
+]
+
+[start]
+cmd = "npm start"

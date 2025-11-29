@@ -46,20 +46,20 @@ export function ProfileImageStep({
     try {
       // Get wallet address from multiple sources
       let walletAddress: string | null = null;
-      
+
       // First, try from wallets state
       const aptosWallet = wallets?.find((w) => w.chain === "APTOS");
       if (aptosWallet) {
         walletAddress = aptosWallet.address;
       }
-      
+
       // If not found, try localStorage
       if (!walletAddress) {
         try {
           const storedWallets = localStorage.getItem("shingru-wallets");
           if (storedWallets) {
             const parsed = JSON.parse(storedWallets);
-            const storedAptosWallet = Array.isArray(parsed) 
+            const storedAptosWallet = Array.isArray(parsed)
               ? parsed.find((w: any) => w.chain === "APTOS")
               : null;
             if (storedAptosWallet) {
@@ -70,7 +70,7 @@ export function ProfileImageStep({
           console.error("Error reading wallets from localStorage:", error);
         }
       }
-      
+
       // If still not found, try directly from Petra wallet
       if (!walletAddress && typeof window !== "undefined" && (window as any).aptos) {
         try {
@@ -82,14 +82,14 @@ export function ProfileImageStep({
           console.error("Error getting wallet from Petra:", error);
         }
       }
-      
+
       if (!walletAddress) {
         throw new Error("Wallet not found. Please reconnect your wallet.");
       }
 
       // Get user from Supabase using wallet address (more reliable than me.id)
       const user = await getUserByWallet(walletAddress, "APTOS");
-      
+
       if (!user) {
         throw new Error("User not found in database. Please complete the username step first.");
       }
@@ -195,10 +195,8 @@ export function ProfileImageStep({
         {/* Continue button - now part of regular flow */}
         <div>
           <MainButton
-            onClick={handleContinue}
-            isLoading={isLoading}
-            className="rounded-2xl py-4 disabled:opacity-40 w-full"
-            disabled={!selectedEmoji || !selectedColor}
+            onClick={onNext}
+            className="w-full h-14 rounded-2xl text-lg font-semibold bg-green-600 hover:bg-green-400 text-white"
           >
             Continue
           </MainButton>

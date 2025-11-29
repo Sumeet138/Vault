@@ -7,24 +7,24 @@ import BlueCloud from "@/components/icons/BlueCloud";
 
 const faqs = [
   {
-    question: "How does SHINGRU work?",
+    question: "How does VAULT work?",
     answer:
-      "When you create a SHINGRU link, we use stealth address implementation to generate a unique address for every payment. It's like having endless private mailboxes that all deliver to you, and no one knows they're linked.",
+      "When you create a VAULT link, we use stealth address implementation to generate a unique address for every payment. It's like having endless private mailboxes that all deliver to you, and no one knows they're linked.",
   },
   {
-    question: "How much does SHINGRU cost?",
+    question: "How much does VAULT cost?",
     answer:
-      "SHINGRU is free to use. We may introduce premium features in the future, but the core functionality will always be free.",
+      "VAULT is free to use. We may introduce premium features in the future, but the core functionality will always be free.",
   },
   {
-    question: "Do SHINGRU have a token?",
+    question: "Do VAULT have a token?",
     answer:
-      "No, SHINGRU doesn't have a token. We're focused on building the product.",
+      "No, VAULT doesn't have a token. We're focused on building the product.",
   },
   {
-    question: "How private is SHINGRU really?",
+    question: "How private is VAULT really?",
     answer:
-      "SHINGRU is designed to be as private as possible. We use stealth addresses to ensure that your transactions cannot be linked to your real-world identity.",
+      "VAULT is designed to be as private as possible. We use stealth addresses to ensure that your transactions cannot be linked to your real-world identity.",
   },
 ];
 
@@ -39,9 +39,8 @@ const AccordionItem = ({
 }) => {
   return (
     <div
-      className={`relative transition-colors duration-300 ease-out overflow-hidden ${
-        isOpen ? "bg-gray-100 rounded-3xl" : "bg-transparent"
-      }`}
+      className={`relative transition-colors duration-300 ease-out overflow-hidden ${isOpen ? "bg-gray-100 rounded-3xl" : "bg-transparent"
+        }`}
     >
       {/* <motion.div
         className="absolute -top-8 -left-8 z-0"
@@ -66,9 +65,8 @@ const AccordionItem = ({
         className="w-full p-5 md:p-6 text-left flex justify-between items-center cursor-pointer relative z-10"
       >
         <h3
-          className={`flex-1 text-xl font-semibold transition-colors duration-300 pr-4 ${
-            isOpen ? "text-primary-700" : "text-gray-900"
-          }`}
+          className={`flex-1 text-xl font-semibold transition-colors duration-300 pr-4 ${isOpen ? "text-primary-700" : "text-gray-900"
+            }`}
         >
           {faq.question}
         </h3>

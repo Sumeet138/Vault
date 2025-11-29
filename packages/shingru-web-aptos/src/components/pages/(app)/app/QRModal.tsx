@@ -12,7 +12,7 @@ import { useIsMounted } from "@/hooks/use-is-mounted";
 import CuteQrCode from "@/components/common/CuteQrCode/CuteQrCode";
 import AnimateComponent from "@/components/common/AnimateComponent";
 import BlackShingruIcon from "@/components/icons/BlackShingruIcon";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { COLOR_PICKS } from "@/config/styling";
 
 interface QRModalProps {
@@ -283,8 +283,10 @@ export default function QRModal({
                           stiffness: 500,
                           damping: 32,
                         }}
-                        className="absolute inset-0 flex items-center justify-center gap-2 bg-primary-200 text-primary-700 text-sm font-medium"
+                        onClick={handleCopyToClipboard}
+                        className="absolute inset-0 flex items-center justify-center gap-2 bg-green-100 text-green-700 text-sm font-medium"
                       >
+                        <CheckIcon className="w-4 h-4" />
                         Copied!
                       </motion.div>
                     ) : (

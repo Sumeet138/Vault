@@ -70,13 +70,13 @@ export default function PaymentInterface() {
   const tokenForFixedPrice =
     chainDataForFixedPrice?.mint && isFixedPrice
       ? {
-          name: chainDataForFixedPrice.mint.name,
-          symbol: chainDataForFixedPrice.mint.symbol,
-          address: chainDataForFixedPrice.mint.mintAddress,
-          decimals: chainDataForFixedPrice.mint.decimals,
-          image: chainDataForFixedPrice.mint.imageUrl,
-          isNative: chainDataForFixedPrice.mint.isNative,
-        }
+        name: chainDataForFixedPrice.mint.name,
+        symbol: chainDataForFixedPrice.mint.symbol,
+        address: chainDataForFixedPrice.mint.mintAddress,
+        decimals: chainDataForFixedPrice.mint.decimals,
+        image: chainDataForFixedPrice.mint.imageUrl,
+        isNative: chainDataForFixedPrice.mint.isNative,
+      }
       : null;
 
   // Fetch balance for fixed token
@@ -319,7 +319,7 @@ export default function PaymentInterface() {
               </div>
             </motion.div>
           )}
-          
+
           {wallet.connected && (
             <motion.div
               initial={{ opacity: 0, y: 15 }}
@@ -328,114 +328,114 @@ export default function PaymentInterface() {
               transition={{ duration: 0.4, ease: EASE_OUT_QUART }}
               className="space-y-8"
             >
-            {/* Amount Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.05 }}
-              className="space-y-3"
-            >
-              {isFixedPrice && tokenForFixedPrice ? (
-                <StaticTokenInput
-                  amount={amount}
-                  token={tokenForFixedPrice}
-                  balance={fixedTokenBalance}
-                  isLoadingBalance={isLoadingBalance}
-                />
-              ) : addressData?.linkData ? (
-                <TokenInput
-                  chain={walletChain as any}
-                  address={wallet.publicKey || ""}
-                  defaultToken="APTOS"
-                  onChange={handleTokenInputChange}
-                />
-              ) : (
-                // Backend-less mode: use predefined tokens
-                <TokenInput
-                  mode="predefined"
-                  tokens={[
-                    {
-                      name: "Aptos",
-                      symbol: "APT",
-                      address: "0x1::aptos_coin::AptosCoin",
-                      decimals: 8,
-                      isNative: true,
-                    },
-                  ]}
-                  defaultToken="APT"
-                  onChange={handleTokenInputChange}
-                  isShowMax={false}
-                />
-              )}
-            </motion.div>
-
-            {/* Payment Note Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.1 }}
-              className="space-y-2"
-            >
-              <div className="relative">
-                <Textarea
-                  className="w-full min-h-28 rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-900 placeholder:text-gray-400 focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-100 transition-all resize-none"
-                  placeholder="Add a note to this payment (optional)"
-                  value={paymentNote}
-                  onChange={(e) => setPaymentNote(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </motion.div>
-
-            {/* Collect Info Form */}
-            {collectInfoValidation.required && (
+              {/* Amount Section */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.15 }}
+                transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.05 }}
+                className="space-y-3"
               >
-                <CollectInfoForm
-                  formData={collectInfoData}
-                  onFormChange={handleCollectInfoChange}
-                  errors={collectInfoErrors}
-                />
+                {isFixedPrice && tokenForFixedPrice ? (
+                  <StaticTokenInput
+                    amount={amount}
+                    token={tokenForFixedPrice}
+                    balance={fixedTokenBalance}
+                    isLoadingBalance={isLoadingBalance}
+                  />
+                ) : addressData?.linkData ? (
+                  <TokenInput
+                    chain={walletChain as any}
+                    address={wallet.publicKey || ""}
+                    defaultToken="APTOS"
+                    onChange={handleTokenInputChange}
+                  />
+                ) : (
+                  // Backend-less mode: use predefined tokens
+                  <TokenInput
+                    mode="predefined"
+                    tokens={[
+                      {
+                        name: "Aptos",
+                        symbol: "APT",
+                        address: "0x1::aptos_coin::AptosCoin",
+                        decimals: 8,
+                        isNative: true,
+                      },
+                    ]}
+                    defaultToken="APT"
+                    onChange={handleTokenInputChange}
+                    isShowMax={false}
+                  />
+                )}
               </motion.div>
-            )}
 
-            {/* Payment Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.2 }}
-            >
-              {walletChain === "APTOS" && (
-                <AptosPayButton
-                  selectedToken={selectedToken}
-                  amount={amount}
-                  stealthData={addressData}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                  onValidate={handlePrePaymentValidation}
-                />
+              {/* Payment Note Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.1 }}
+                className="space-y-2"
+              >
+                <div className="relative">
+                  <Textarea
+                    className="w-full min-h-28 rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-900 placeholder:text-gray-400 focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-100 transition-all resize-none"
+                    placeholder="Add a note to this payment (optional)"
+                    value={paymentNote}
+                    onChange={(e) => setPaymentNote(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </motion.div>
+
+              {/* Collect Info Form */}
+              {collectInfoValidation.required && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.15 }}
+                >
+                  <CollectInfoForm
+                    formData={collectInfoData}
+                    onFormChange={handleCollectInfoChange}
+                    errors={collectInfoErrors}
+                  />
+                </motion.div>
               )}
-            </motion.div>
 
-            {/* Footer */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.25 }}
-              className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100"
-            >
-              <div className="flex items-center justify-center gap-1.5 pt-4">
-                <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
-                <span className="font-medium">Secured by SHINGRU</span>
-                <span className="text-gray-300">•</span>
-                <span>Private Self-custodial Payments</span>
-              </div>
-            </motion.div>
+              {/* Payment Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.2 }}
+              >
+                {walletChain === "APTOS" && (
+                  <AptosPayButton
+                    selectedToken={selectedToken}
+                    amount={amount}
+                    stealthData={addressData}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                    onValidate={handlePrePaymentValidation}
+                  />
+                )}
+              </motion.div>
+
+              {/* Footer */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.25 }}
+                className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100"
+              >
+                <div className="flex items-center justify-center gap-1.5 pt-4">
+                  <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-medium">Secured by VAULT</span>
+                  <span className="text-gray-300">•</span>
+                  <span>Private Self-custodial Payments</span>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </div>

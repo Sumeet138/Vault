@@ -27,11 +27,10 @@ const TemplateButton: React.FC<TemplateButtonProps> = ({
   onSelect,
 }) => (
   <div
-    className={`bg-white rounded-3xl border border-black/5 shadow-supa-smooth transition-shadow relative ${
-      template.isComingSoon
+    className={`bg-white rounded-3xl border border-black/5 shadow-supa-smooth transition-shadow relative ${template.isComingSoon
         ? "opacity-50 cursor-not-allowed"
         : "hover:bg-gray-50 cursor-pointer"
-    }`}
+      }`}
     onClick={() => !template.isComingSoon && onSelect(template)}
   >
     <div className="p-4 sm:p-5">
@@ -157,9 +156,9 @@ function CreateLinkContent() {
   const handleTemplateSelect = (template: PaymentTemplate) => {
     setSelectedTemplate(template);
     // Track template selection
-    trackFeatureUsage('template_selection', { 
+    trackFeatureUsage('template_selection', {
       templateId: template.id,
-      templateTitle: template.title 
+      templateTitle: template.title
     });
   };
 
@@ -259,18 +258,19 @@ function CreateLinkContent() {
                   isSubmitting
                 }
                 isLoading={isSubmitting}
-                className={cn(
-                  "w-full",
-                  !formData.name.trim() ||
-                    isDuplicateName ||
-                    !selectedTemplate ||
-                    isSubmitting
-                    ? "!bg-gray-50 !text-gray-400 !border-gray-200"
-                    : "!bg-primary !text-gray-900",
-                  "py-4 rounded-2xl"
-                )}
+                className={`w-full h-14 rounded-2xl text-lg font-semibold shadow-lg transition-all duration-200 ${isSubmitting
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "!bg-green-600 !text-white hover:!bg-green-400 hover:scale-[1.02] active:scale-[0.98]"
+                  }`}
               >
-                {isSubmitting ? "Creating Link..." : "Create Payment Link"}
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Creating...
+                  </div>
+                ) : (
+                  "Create Link"
+                )}
               </MainButton>
             </div>
           )}

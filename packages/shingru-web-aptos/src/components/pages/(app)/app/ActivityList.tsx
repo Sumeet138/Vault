@@ -9,11 +9,6 @@ import { ActivityItem } from "../activities/ActivityItem";
 import { cnm } from "@/utils/style";
 import MainButton from "@/components/common/MainButton";
 
-const ENABLE_MOCK_DATA = false;
-
-// Mock activities data
-const mockActivities = [];
-
 const TYPE_TABS = [
   {
     id: "all",
@@ -127,13 +122,7 @@ function ActivityList({
 
   // Filter activities based on selected tab and limit if specified
   const filteredActivities = useMemo(() => {
-    // Use real activities if available, otherwise use mock data if enabled
-    const activitiesData =
-      activities && activities.length > 0
-        ? activities
-        : ENABLE_MOCK_DATA
-        ? mockActivities
-        : [];
+    const activitiesData = activities || [];
 
     let filtered = activitiesData;
     switch (selectedType) {
@@ -186,11 +175,8 @@ function ActivityList({
       }));
   }, [filteredActivities, dateGrouping]);
 
-  // Loading state - only show if no mock data and actually loading
-  if (
-    activitiesInitialLoading &&
-    (!ENABLE_MOCK_DATA || (activities && activities.length > 0))
-  ) {
+  // Loading state
+  if (activitiesInitialLoading) {
     return (
       <div className="space-y-4">
         <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
@@ -201,11 +187,8 @@ function ActivityList({
     );
   }
 
-  // Error state - only show if there's an error and no mock data or real activities
-  if (
-    activitiesError &&
-    (!ENABLE_MOCK_DATA || (activities && activities.length === 0))
-  ) {
+  // Error state
+  if (activitiesError && (!activities || activities.length === 0)) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -255,10 +238,8 @@ function ActivityList({
     );
   }
 
-  // Determine if we have any activities to show (real or mock)
-  const hasActivities =
-    (activities && activities.length > 0) ||
-    (ENABLE_MOCK_DATA && mockActivities.length > 0);
+  // Determine if we have any activities to show
+  const hasActivities = activities && activities.length > 0;
 
   return (
     <div className="space-y-4">
@@ -333,9 +314,7 @@ function ActivityList({
               )}
             </motion.div>
           ) : (
-            // Only show empty state if there's no mock data or if mock data is disabled and no real activities
-            (!ENABLE_MOCK_DATA || (activities && activities.length > 0)) && (
-              <motion.div
+            <motion.div
                 key={`${selectedType}-empty`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -381,7 +360,6 @@ function ActivityList({
                   </Link>
                 )}
               </motion.div>
-            )
           )}
         </AnimatePresence>
       </div>

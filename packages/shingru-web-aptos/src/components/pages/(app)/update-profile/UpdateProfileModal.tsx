@@ -268,11 +268,10 @@ export default function UpdateProfileModal({
           <div className="mt-8">
             <MainButton
               onClick={handleUpdateProfile}
-              disabled={!canSubmit()}
-              isLoading={isSubmitting}
-              className="rounded-2xl disabled:opacity-40 w-full"
+              disabled={isSubmitting}
+              className="w-full h-14 rounded-2xl text-lg font-semibold bg-green-600 hover:bg-green-400 text-white disabled:opacity-50"
             >
-              {isSubmitting ? "Updating..." : "Update Profile"}
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </MainButton>
           </div>
         </div>

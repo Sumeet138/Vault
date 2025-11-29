@@ -472,7 +472,7 @@ function PayContextProvider({
     });
   }, [addressData, selectedChain]);
 
-  // Backend-less: Load address data from initialData or create mock data
+  // Load address data from initialData or use defaults
   useEffect(() => {
     let mounted = true;
 
@@ -481,7 +481,7 @@ function PayContextProvider({
       setError(null);
 
       try {
-        // Use initialData if provided, otherwise create mock data for backend-less operation
+        // Use initialData if provided, otherwise fall back to defaults
         if (initialData) {
           if (!mounted) return;
           setAddressData(initialData);
@@ -507,10 +507,9 @@ function PayContextProvider({
             setSelectedChain("APTOS");
           }
         } else {
-          // Backend-less: Create minimal mock data structure
-          // In a real backend-less app, this would come from on-chain data or IPFS
-          console.warn("No initial data provided - using mock data for backend-less operation");
-          // Don't set error, just use default chain
+          // Fallback: When no initial data is provided, default to Aptos chain
+          // This can happen when loading a user's page before their data is fetched
+          console.warn("No initial data provided - defaulting to Aptos chain");
           if (!mounted) return;
           setAvailableChains(["APTOS"]);
           setSelectedChain("APTOS");

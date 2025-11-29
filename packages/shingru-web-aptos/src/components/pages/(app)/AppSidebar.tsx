@@ -1,6 +1,5 @@
 "use client";
 
-import { cnm } from "@/utils/style";
 import {
   ArrowUpRightIcon,
   Cog6ToothIcon,
@@ -8,13 +7,16 @@ import {
   QueueListIcon,
   Squares2X2Icon,
 } from "@heroicons/react/24/outline";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import AnnouncementModal from "./AnnouncementModal";
-import { motion } from "motion/react";
-import { EASE_OUT_QUART } from "@/config/animation";
+import { useRef } from "react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  MotionValue,
+} from "motion/react";
 
 const MENUS = [
   {
@@ -32,7 +34,6 @@ const MENUS = [
     title: "Activities",
     icon: QueueListIcon,
   },
-
   {
     path: "/app/settings",
     title: "Settings",
@@ -41,57 +42,65 @@ const MENUS = [
 ];
 
 export default function AppSidebar() {
-  const pathname = usePathname();
-  const [announcementModalOpen, setAnnouncementModalOpen] = useState(false);
+  const mouseY = useMotionValue(Infinity);
 
   return (
-    <div className="hidden md:flex w-64 h-full flex-shrink-0 border-r border-black/5 flex-col">
-      <div className="flex-1">
-        {/* Header */}
-        <div className="px-5 pt-6">
-          <div className="flex items-center gap-2">
-            <div className="text-2xl font-bold text-gray-900">shingru</div>
-            <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-gray-100 text-gray-600 rounded-md border border-black/5">
-              APTOS
-            </span>
-          </div>
-        </div>
-
-        {/* Menus */}
-        <nav className="mt-4 px-3 font-sans">
-          <div className="flex flex-col gap-1">
-            {MENUS.map((item, idx) => (
-              <Link
-                key={idx}
-                href={item.path}
-                className={cnm(
-                  "group flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition duration-100",
-                  "hover:bg-gray-50 hover:text-gray-900",
-                  item.path === pathname
-                    ? "bg-gray-50 text-gray-900 font-medium"
-                    : "text-gray-400 hover:bg-gray-50"
-                )}
-              >
-                <div className="size-5.5 flex items-center justify-center flex-shrink-0">
-                  <item.icon className="size-5.5 stroke-2" />
-                </div>
-
-                <span className="font-medium">{item.title}</span>
-              </Link>
-            ))}
-          </div>
-        </nav>
+    <div className="hidden md:flex h-full flex-col items-center justify-center py-8 px-4 z-50 w-24 relative">
+      {/* Branding */}
+      <div className="absolute top-8 font-bold text-xl tracking-tight text-gray-900">
+        vault
       </div>
 
-
-
-      {/* Footer Links */}
-
-      {/* Announcement Modal */}
-      <AnnouncementModal
-        isOpen={announcementModalOpen}
-        onClose={() => setAnnouncementModalOpen(false)}
-      />
+      {/* Dock Container */}
+      <motion.div
+        onMouseMove={(e) => mouseY.set(e.pageY)}
+        onMouseLeave={() => mouseY.set(Infinity)}
+        className="flex flex-col gap-4 items-center rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 px-3 py-4 shadow-lg"
+      >
+        {MENUS.map((item, idx) => (
+          <DockItem key={idx} mouseY={mouseY} item={item} />
+        ))}
+      </motion.div>
     </div>
+  );
+}
+
+function DockItem({
+  mouseY,
+  item,
+}: {
+  mouseY: MotionValue;
+  item: (typeof MENUS)[0];
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const isActive = pathname === item.path;
+
+  let distance = useTransform(mouseY, (val) => {
+    let bounds = ref.current?.getBoundingClientRect() ?? { y: 0, height: 0 };
+    return val - bounds.y - bounds.height / 2;
+  });
+
+  let widthSync = useTransform(distance, [-150, 0, 150], [40, 80, 40]);
+  let width = useSpring(widthSync, { mass: 0.1, stiffness: 150, damping: 12 });
+
+  return (
+    <Link href={item.path}>
+      <motion.div
+        ref={ref}
+        style={{ width, height: width }}
+        className={`rounded-xl flex items-center justify-center relative group transition-colors ${isActive
+          ? "bg-gray-900 text-white shadow-md"
+          : "bg-white/50 text-gray-500 hover:bg-white hover:text-gray-900"
+          }`}
+      >
+        <item.icon className="w-1/2 h-1/2 stroke-2" />
+
+        {/* Tooltip */}
+        <div className="absolute left-full ml-4 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+          {item.title}
+        </div>
+      </motion.div>
+    </Link>
   );
 }

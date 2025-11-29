@@ -132,7 +132,7 @@ export default function WithdrawModal({
       if (!me?.id) {
         throw new Error('User not authenticated');
       }
-      
+
       // Calculate amount in smallest unit
       const amountInSmallestUnit = BigInt(Math.floor(withdrawAmount.amount * Math.pow(10, token.decimals)));
 
@@ -159,7 +159,7 @@ export default function WithdrawModal({
 
       setShowSuccessDialog(true);
       setLastTxSignature(result.txHash);
-      
+
       // Refresh balances
       setTimeout(() => {
         window.location.reload();
@@ -370,11 +370,10 @@ export default function WithdrawModal({
                         <Spinner />
                       ) : (
                         <button
-                          className={`p-2 rounded-lg transition-colors ${
-                            searchQuery.trim()
+                          className={`p-2 rounded-lg transition-colors ${searchQuery.trim()
                               ? "bg-black/10 hover:bg-background-700"
                               : "bg-black/10 px-3 text-sm font-medium hover:bg-background-700"
-                          }`}
+                            }`}
                           onClick={
                             searchQuery.trim() ? handleClearSearch : undefined
                           }
@@ -510,11 +509,11 @@ export default function WithdrawModal({
                                 result.type === "ans"
                                   ? result.name
                                   : result.type === "sns"
-                                  ? result.name
-                                  : result.type === "username" ||
-                                    result.type === "shingru"
-                                  ? result.username
-                                  : result.address
+                                    ? result.name
+                                    : result.type === "username" ||
+                                      result.type === "shingru"
+                                      ? result.username
+                                      : result.address
                               }
                               variants={{
                                 hidden: { opacity: 0, y: 20 },
@@ -682,7 +681,7 @@ export default function WithdrawModal({
                                   ${" "}
                                   {formatUiNumber(
                                     feeDetails.amountToReceive *
-                                      (token.priceUsd ?? 0),
+                                    (token.priceUsd ?? 0),
                                     "",
                                     { maxDecimals: 2 }
                                   )}
@@ -814,12 +813,12 @@ export default function WithdrawModal({
                       ? `Processing (${currentTxNumber}/${totalTxCount})...`
                       : "Processing..."
                     : `Withdraw ${formatUiNumber(
-                        feeDetails.amountToReceive,
-                        "",
-                        {
-                          maxDecimals: 4,
-                        }
-                      )} ${withdrawAmount.token.symbol}`}
+                      feeDetails.amountToReceive,
+                      "",
+                      {
+                        maxDecimals: 4,
+                      }
+                    )} ${withdrawAmount.token.symbol}`}
                 </MainButton>
               </div>
             ) : (

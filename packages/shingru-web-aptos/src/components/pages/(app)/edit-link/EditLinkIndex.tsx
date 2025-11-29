@@ -252,7 +252,7 @@ function EditLinkContent({ link }: { link: Link }) {
               <CollectInfoOption
                 variant="digital-product"
                 isOpen={formData.collectInfo}
-                onToggle={() => {}} // Disabled for digital products
+                onToggle={() => { }} // Disabled for digital products
                 collectFields={formData.collectFields}
                 onFieldChange={handleCollectFieldChange}
                 disabled={true}

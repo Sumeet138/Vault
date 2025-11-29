@@ -10,7 +10,7 @@ import AppearanceModal from "./AppearanceModal";
 import CurrencyModal from "./CurrencyModal";
 import ConnectedWalletModal from "./ConnectedWalletModal";
 import UpdateProfileModal from "../update-profile/UpdateProfileModal";
-import MainButton from "@/components/common/MainButton";
+import CuteButton from "@/components/common/CuteButton";
 import { shortenId } from "@/utils/misc";
 import Image from "next/image";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
@@ -32,7 +32,7 @@ export default function SettingsIndex() {
     useState(false);
   const [updateProfileModalOpen, setUpdateProfileModalOpen] = useState(false);
   const [announcementModalOpen, setAnnouncementModalOpen] = useState(false);
-  
+
   // Photon wallet state
   const [photonWalletInfo, setPhotonWalletInfo] = useState<PhotonWalletInfo | null>(null);
   const [photonWalletLoading, setPhotonWalletLoading] = useState(false);
@@ -92,21 +92,21 @@ export default function SettingsIndex() {
 
   const handleCreatePhotonWallet = async () => {
     if (isCreatingWallet) return;
-    
+
     setIsCreatingWallet(true);
     try {
       console.log("Creating Photon wallet...");
-      
+
       // Call AuthProvider's authenticateWithPhoton which handles the full flow
       await authWithPhoton();
-      
+
       // Wait a bit for the authentication to complete
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Refresh wallet info after creation
       const walletInfo = await getPhotonWalletInfo();
       setPhotonWalletInfo(walletInfo);
-      
+
       console.log("✅ Photon wallet created successfully");
     } catch (error) {
       console.error("Error creating Photon wallet:", error);
@@ -139,7 +139,7 @@ export default function SettingsIndex() {
         <div className="md:hidden mt-8">
           <motion.div
             onClick={() => setAnnouncementModalOpen(true)}
-            className="block rounded-2xl overflow-hidden cursor-pointer"
+            className="block rounded-2xl overflow-hidden cursor-pointer bg-white border border-black/5 shadow-sm"
             whileHover="hover"
             initial="initial"
           >
@@ -167,7 +167,7 @@ export default function SettingsIndex() {
             <div className="px-4 py-3 flex items-center justify-between gap-2 bg-gray-100">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900 leading-snug">
-                  SHINGRU on Moveathon!
+                  VAULT on Moveathon!
                 </p>
                 <p className="text-xs text-gray-600 mt-0.5">
                   Click to learn more
@@ -279,12 +279,14 @@ const ProfileLoginBox = ({ onEditProfile }: { onEditProfile: () => void }) => {
             </div>
           </div>
 
-          <MainButton
-            onClick={onEditProfile}
-            className="bg-gray-100 text-gray-900 hover:bg-gray-200 w-full text-sm h-auto py-2 rounded-full px-4"
+          <CuteButton
+            onPress={onEditProfile}
+            className="w-full text-sm h-auto py-2 rounded-full px-4"
+            color="green"
+            variant="flat"
           >
             Edit
-          </MainButton>
+          </CuteButton>
         </div>
       </div>
     </div>

@@ -63,7 +63,7 @@ export default function AppHeader() {
     if (isLinkDetailRoute) {
       return "";
     }
-    return hasExplicitOverrideTitle ? "" : "SHINGRU";
+    return hasExplicitOverrideTitle ? "" : "VAULT";
   }, [pathname, overrideTitle, hasExplicitOverrideTitle, isLinkDetailRoute]);
 
   const handleBackClick = () => {

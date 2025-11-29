@@ -112,11 +112,11 @@ export default function CtaSection() {
           <h2 className="text-3xl md:text-5xl font-bold text-center leading-tight px-5 md:px-0">
             If you scrolled this far,
             <br /> Its time for you to <br className="block sm:hidden" />
-            <span className="text-primary-600">SHINGRU IT UP!</span>
+            <span className="text-primary-600">VAULT IT UP!</span>
           </h2>
 
           <Link href="/login" className="mt-8">
-            <button className="cursor-pointer bg-primary hover:bg-primary-400  md:text-lg font-semibold rounded-2xl px-5 h-14 text-black border-none shadow-none">
+            <button className="cursor-pointer bg-green-600 hover:bg-green-400 md:text-lg font-semibold rounded-2xl px-5 h-14 text-white border-none shadow-none">
               Create Your Link
             </button>
           </Link>

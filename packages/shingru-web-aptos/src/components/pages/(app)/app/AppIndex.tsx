@@ -140,7 +140,7 @@ export default function AppHome() {
               {/* Description */}
               <div className="space-y-4">
                 <p className="text-gray-700 leading-relaxed">
-                  Link this NFC tag to your SHINGRU account and share your personal
+                  Link this NFC tag to your VAULT account and share your personal
                   payment link with just a tap! ✨
                 </p>
 
@@ -261,7 +261,7 @@ export default function AppHome() {
                   transition={{ delay: 0.5 }}
                   className="text-gray-600 leading-relaxed"
                 >
-                  Your NFC tag is now linked to your SHINGRU account. You can now
+                  Your NFC tag is now linked to your VAULT account. You can now
                   share your payment link with just a tap! 🎊
                 </motion.p>
               </div>

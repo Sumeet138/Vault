@@ -88,14 +88,14 @@ export function UsernameStep({
 
       // Get wallet address from multiple sources
       let walletAddress: string | null = null;
-      
+
       // 1. Try from wallets prop
       const aptosWallet = wallets?.find((w) => w.chain === "APTOS");
       if (aptosWallet) {
         walletAddress = aptosWallet.address;
         console.log("Got wallet from wallets prop:", walletAddress);
       }
-      
+
       // 2. Try from localStorage
       if (!walletAddress) {
         const storedWallets = localStorage.getItem("shingru-wallets");
@@ -164,7 +164,7 @@ export function UsernameStep({
         "APTOS",
         username
       );
-      
+
       if (!updatedUser) {
         throw new Error("Failed to update username in database. Please try again.");
       }
@@ -187,7 +187,7 @@ export function UsernameStep({
       if (onUsernameChange) {
         onUsernameChange(username);
       }
-      
+
     } catch (error: any) {
       console.error("Error setting username:", error);
       setSubmitError(error.message || "Failed to update username. Please try again.");
@@ -274,18 +274,18 @@ export function UsernameStep({
             isChecking={isChecking}
             validationError={validationError}
             restrictedUsernames={RESTRICTED_USERNAME}
-            // `originalUsername` is not needed here as it's for new user creation
+          // `originalUsername` is not needed here as it's for new user creation
           />
         </div>
         {/* --- END REPLACEMENT --- */}
-        
+
         {/* Error message */}
         {submitError && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-600">{submitError}</p>
           </div>
         )}
-        
+
       </motion.div>
 
       {/* Continue button */}
@@ -303,7 +303,7 @@ export function UsernameStep({
         <MainButton
           onClick={handleSubmitUsername}
           isLoading={isSubmitting}
-          className="rounded-2xl py-4 disabled:opacity-20 w-full"
+          className="w-full h-14 rounded-2xl text-lg font-semibold bg-green-600 hover:bg-green-400 text-white disabled:bg-gray-200 disabled:text-gray-400"
           disabled={
             !username || !isAvailable || isChecking || !!validationError
           }

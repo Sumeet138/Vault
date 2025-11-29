@@ -15,7 +15,7 @@ export default function AnnouncementModal({ isOpen, onClose }: AnnouncementModal
     <CuteModal
       isOpen={isOpen}
       onClose={onClose}
-      title="SHINGRU × APTOS"
+      title="VAULT × APTOS"
       withHandle={true}
       size="lg"
       fullscreen={true}
@@ -28,7 +28,7 @@ export default function AnnouncementModal({ isOpen, onClose }: AnnouncementModal
             <div className="text-3xl font-bold text-gray-900">shingru</div>
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            SHINGRU × APTOS
+            VAULT × APTOS
           </h3>
           <p className="text-gray-700 font-medium">
             Private payments on APTOS
@@ -65,7 +65,7 @@ export default function AnnouncementModal({ isOpen, onClose }: AnnouncementModal
                   Privacy by Default
                 </h5>
                 <p className="text-sm text-gray-600">
-                  We believe privacy is a fundamental right. SHINGRU makes on-chain privacy simple and accessible for everyone.
+                  We believe privacy is a fundamental right. VAULT makes on-chain privacy simple and accessible for everyone.
                 </p>
               </div>
             </div>
@@ -76,7 +76,7 @@ export default function AnnouncementModal({ isOpen, onClose }: AnnouncementModal
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
           <p className="text-sm text-gray-600 leading-relaxed">
             <span className="font-semibold text-gray-900">About:</span>{" "}
-            SHINGRU builds privacy infrastructure for APTOS. We use stealth addresses to keep your transactions private while maintaining the simplicity you expect from modern payments.
+            VAULT builds privacy infrastructure for APTOS. We use stealth addresses to keep your transactions private while maintaining the simplicity you expect from modern payments.
           </p>
         </div>
       </div>

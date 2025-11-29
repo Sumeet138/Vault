@@ -6,14 +6,14 @@ import SoftEmojiBadge from "@/components/pages/(landing)/SoftEmojiBadge";
 type Benefit = {
   emoji: string;
   color:
-    | "blue"
-    | "purple"
-    | "pink"
-    | "green"
-    | "yellow"
-    | "red"
-    | "teal"
-    | "gray";
+  | "blue"
+  | "purple"
+  | "pink"
+  | "green"
+  | "yellow"
+  | "red"
+  | "teal"
+  | "gray";
   title: string;
   desc: string;
 };
@@ -86,7 +86,7 @@ export default function BenefitsSection() {
       >
         <div className="text-center">
           <div className="text-xs tracking-widest uppercase text-foreground/60">
-            Why SHINGRU
+            Why VAULT
           </div>
           <h2 className="mt-2 text-3xl md:text-5xl font-semibold">
             Built to convert, designed for privacy

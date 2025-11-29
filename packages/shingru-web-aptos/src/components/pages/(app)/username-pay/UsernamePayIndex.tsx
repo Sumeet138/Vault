@@ -107,8 +107,8 @@ function PayPageContent() {
         {/* Action Button */}
         <div className="mt-6">
           <Link href="/app">
-            <MainButton className="px-8 rounded-2xl">
-              <p className="font-semibold text-lg">Go Home</p>
+            <MainButton className="px-8 rounded-2xl bg-green-600 hover:bg-green-400 text-white">
+              Pay
             </MainButton>
           </Link>
         </div>
@@ -271,20 +271,18 @@ function PayPageContent() {
             <div
               className="flex-1 flex flex-col items-center justify-center p-8 relative h-full"
               style={{
-                backgroundColor: `${
-                  COLOR_PICKS.find((c) => c.id === currentColor)?.value ||
+                backgroundColor: `${COLOR_PICKS.find((c) => c.id === currentColor)?.value ||
                   COLOR_PICKS[1].value
-                }10`,
+                  }10`,
               }}
             >
               <FlickeringGrid
                 className="absolute inset-0 z-0 size-full h-full"
                 squareSize={2}
                 gridGap={12}
-                color={`${
-                  COLOR_PICKS.find((c) => c.id === currentColor)?.value ||
+                color={`${COLOR_PICKS.find((c) => c.id === currentColor)?.value ||
                   COLOR_PICKS[1].value
-                }`}
+                  }`}
                 maxOpacity={0.5}
                 flickerChance={0.1}
               />
@@ -329,14 +327,12 @@ function PayPageContent() {
                     <div
                       className="rounded-[1.4rem]"
                       style={{
-                        border: `2px solid ${
-                          COLOR_PICKS.find((c) => c.id === currentColor)
-                            ?.value || COLOR_PICKS[1].value
-                        }`,
-                        backgroundColor: `${
-                          COLOR_PICKS.find((c) => c.id === currentColor)
-                            ?.value || COLOR_PICKS[1].value
-                        }10`,
+                        border: `2px solid ${COLOR_PICKS.find((c) => c.id === currentColor)
+                          ?.value || COLOR_PICKS[1].value
+                          }`,
+                        backgroundColor: `${COLOR_PICKS.find((c) => c.id === currentColor)
+                          ?.value || COLOR_PICKS[1].value
+                          }10`,
                       }}
                     >
                       <div className="px-5 py-4">
@@ -480,7 +476,7 @@ function FloatingLoginCTA() {
       <Link
         href="/login"
         className="group block"
-        aria-label="Create your SHINGRU"
+        aria-label="Create your VAULT"
       >
         <motion.div
           whileHover={{ scale: 1.02 }}
@@ -493,7 +489,7 @@ function FloatingLoginCTA() {
             </div>
             <div className="flex flex-col flex-1">
               <span className="text-sm font-bold text-gray-900 tracking-tight">
-                Create Your SHINGRU
+                Create Your VAULT
               </span>
               <span className="text-xs font-medium text-gray-700">
                 It&apos;s free and fast!
@@ -517,7 +513,7 @@ export default function UsernamePayIndex({
   initialData,
 }: PayPageProps) {
   return (
-    <PayProvider username={username} tag={tag} initialData={initialData}>
+    <PayProvider username={username} tag={tag} initialData={initialData || undefined}>
       <PayPageContent />
     </PayProvider>
   );

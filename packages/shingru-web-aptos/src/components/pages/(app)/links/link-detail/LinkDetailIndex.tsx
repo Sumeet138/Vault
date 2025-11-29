@@ -55,11 +55,11 @@ const convertToExtendedLink = (link: Link): ExtendedLink => {
     ...link,
     files: link.files
       ? {
-          thumbnail: link.files.thumbnail
-            ? ({ id: link.files.thumbnail } as FileData)
-            : undefined,
-          deliverables: link.files.deliverables || [],
-        }
+        thumbnail: link.files.thumbnail
+          ? ({ id: link.files.thumbnail } as FileData)
+          : undefined,
+        deliverables: link.files.deliverables || [],
+      }
       : undefined,
   };
 };
@@ -165,15 +165,15 @@ export default function LinkDetailIndex({ linkId }: { linkId: string }) {
       rightButton: resolvedLink
         ? isPersonal
           ? {
-              icon: <PencilIcon className="w-6 h-6" />,
-              onPress: () => setIsUpdateProfileModalOpen(true),
-              ariaLabel: "Edit Profile",
-            }
+            icon: <PencilIcon className="w-6 h-6" />,
+            onPress: () => setIsUpdateProfileModalOpen(true),
+            ariaLabel: "Edit Profile",
+          }
           : {
-              icon: <PencilSquareIcon className="w-6 h-6" />,
-              onPress: () => setMenuModalOpen(true),
-              ariaLabel: "More link actions",
-            }
+            icon: <PencilSquareIcon className="w-6 h-6" />,
+            onPress: () => setMenuModalOpen(true),
+            ariaLabel: "More link actions",
+          }
         : null,
     });
   }, [headerTitle, resolvedLink, router, setOverride, isPersonal]);

@@ -18,7 +18,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { isOpen } = useModalStore();
   const isMobile = useIsMobile();
   return (
-    <div className="h-dvh overflow-hidden flex justify-center bg-white">
+    <div className="h-dvh overflow-hidden flex justify-center bg-[url(https://raw.githubusercontent.com/prebuiltui/prebuiltui/main/assets/hero/gradientBackground.png)] bg-cover bg-top bg-no-repeat font-sans text-foreground">
       <motion.div
         id="main-container"
         initial={{
@@ -31,7 +31,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           duration: 0.25,
           ease: EASE_OUT_QUINT,
         }}
-        className="main-container flex relative w-full bg-white"
+        className="main-container flex relative w-full bg-transparent"
       >
         <AppSidebar />
         <MobileBottomNav />
@@ -39,7 +39,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {!isMobile && <AppHeader />}
           <div
             id="main-content"
-            className="flex-1 overflow-x-hidden overflow-y-auto bg-white px-4 z-0"
+            className="flex-1 overflow-x-hidden overflow-y-auto bg-transparent px-4 z-0"
           >
             <PageTransition>
               <>{children}</>

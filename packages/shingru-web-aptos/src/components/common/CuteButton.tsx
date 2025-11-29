@@ -13,13 +13,13 @@ interface CuteButtonProps
   size?: "sm" | "md" | "lg" | "xl";
   radius?: "none" | "sm" | "md" | "lg" | "full";
   variant?:
-    | "solid"
-    | "flat"
-    | "bordered"
-    | "light"
-    | "faded"
-    | "shadow"
-    | "ghost";
+  | "solid"
+  | "flat"
+  | "bordered"
+  | "light"
+  | "faded"
+  | "shadow"
+  | "ghost";
   startContent?: React.ReactNode;
   endContent?: React.ReactNode;
   isDisabled?: boolean;
@@ -28,20 +28,20 @@ interface CuteButtonProps
   fullWidth?: boolean;
   isIconOnly?: boolean;
   color?:
-    | "primary"
-    | "secondary"
-    | "success"
-    | "warning"
-    | "danger"
-    | "default"
-    | "gray"
-    | "blue"
-    | "purple"
-    | "pink"
-    | "green"
-    | "yellow"
-    | "red"
-    | "teal";
+  | "primary"
+  | "secondary"
+  | "success"
+  | "warning"
+  | "danger"
+  | "default"
+  | "gray"
+  | "blue"
+  | "purple"
+  | "pink"
+  | "green"
+  | "yellow"
+  | "red"
+  | "teal";
 }
 
 export default function CuteButton({
@@ -90,7 +90,7 @@ export default function CuteButton({
   // DaisyUI color mapping
   const daisyUIColorMap = {
     primary:
-      "bg-primary border-none text-gray-900 hover:bg-primary/80 disabled:bg-gray-200",
+      "bg-green-600 border-none text-white hover:bg-green-400 disabled:bg-gray-200",
     secondary: "btn-secondary",
     success: "btn-success",
     warning: "btn-warning",
@@ -100,7 +100,7 @@ export default function CuteButton({
     blue: "btn-info",
     purple: "btn-secondary",
     pink: "btn-secondary",
-    green: "btn-success",
+    green: "bg-green-600 hover:bg-green-400 text-white border-none",
     yellow: "btn-warning",
     red: "btn-error",
     teal: "btn-info",

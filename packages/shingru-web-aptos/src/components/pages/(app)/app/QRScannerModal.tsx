@@ -49,7 +49,7 @@ export default function QRScannerModal({
     if (video) {
       try {
         video.pause();
-      } catch {}
+      } catch { }
       // Clear the srcObject to fully detach the stream
       (video as any).srcObject = null;
     }
@@ -139,7 +139,7 @@ export default function QRScannerModal({
             setResult(code.data);
             try {
               onCodeSolvedRef.current?.(code.data);
-            } catch {}
+            } catch { }
             scanningRef.current = false;
             stopStream();
             return;
@@ -247,7 +247,7 @@ export default function QRScannerModal({
                         Camera access is blocked
                       </h3>
                       <p className="text-sm text-white/70 max-w-sm mx-auto">
-                        Please enable camera permissions for SHINGRU in your
+                        Please enable camera permissions for VAULT in your
                         browser settings, then choose “Try again”.
                       </p>
                     </div>
@@ -310,7 +310,7 @@ export default function QRScannerModal({
                       onClick={async () => {
                         try {
                           await navigator.clipboard.writeText(result);
-                        } catch {}
+                        } catch { }
                       }}
                     >
                       Copy
@@ -326,7 +326,13 @@ export default function QRScannerModal({
                       Scan again
                     </button>
                     <button
-                      className="ml-auto px-4 py-2 rounded-xl bg-primary-500 text-white text-sm"
+                      onClick={() => window.location.reload()}
+                      className="px-6 py-2 bg-white text-green-600 rounded-full font-medium hover:bg-white/90 transition-colors"
+                    >
+                      Try again
+                    </button>
+                    <button
+                      className="ml-auto px-4 py-2 rounded-xl bg-green-600 text-white text-sm hover:bg-green-700 transition-colors"
                       onClick={() => {
                         onClose();
                       }}

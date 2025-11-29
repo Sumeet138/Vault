@@ -10,6 +10,7 @@ import {
   InformationCircleIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
+import CuteButton from "@/components/common/CuteButton";
 
 interface PhotonWalletCardProps {
   walletInfo: PhotonWalletInfo | null;
@@ -40,13 +41,14 @@ export default function PhotonWalletCard({
           </div>
 
           {onCreateWallet && (
-            <button
-              onClick={onCreateWallet}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold py-2.5 px-4 rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            <CuteButton
+              onPress={onCreateWallet}
+              isLoading={loading}
+              fullWidth
+              color="green"
             >
-              {loading ? "Creating..." : "Create Photon Wallet"}
-            </button>
+              Create Photon Wallet
+            </CuteButton>
           )}
         </div>
       </div>
@@ -138,12 +140,12 @@ export default function PhotonWalletCard({
         {/* No rewards message */}
         {(!walletInfo!.recentRewards ||
           walletInfo!.recentRewards.length === 0) && (
-          <div className="bg-gray-50 rounded-2xl p-3 text-center">
-            <p className="text-xs text-gray-500">
-              Complete actions to earn PAT tokens
-            </p>
-          </div>
-        )}
+            <div className="bg-gray-50 rounded-2xl p-3 text-center">
+              <p className="text-xs text-gray-500">
+                Complete actions to earn PAT tokens
+              </p>
+            </div>
+          )}
       </div>
     </div>
   );

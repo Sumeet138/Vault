@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useAttributionTracking } from "@/hooks/useAttributionTracking";
+import { ArrowRightIcon } from "@heroicons/react/24/solid";
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -60,16 +61,16 @@ export default function WalletConnectModal({
 
     setIsConnecting(true);
     setError(null);
-    
+
     try {
       // Connect wallet
       const account = await wallet.connect();
       if (account && account.address) {
         console.log("Wallet connected:", account.address);
-        
+
         // Track wallet connection
         trackWalletConnection('aptos', { address: account.address });
-        
+
         await authenticateWithAptos(account.address);
         console.log("Authentication successful");
         onClose();
@@ -107,10 +108,11 @@ export default function WalletConnectModal({
             )}
             <div className="flex gap-3">
               <button
-                onClick={handleConnect}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                onClick={handleConnect} // Changed from onConnect to handleConnect to match existing logic
+                className="w-full bg-green-600 text-white font-semibold py-4 rounded-xl hover:bg-green-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-600/20"
               >
-                Connect Wallet
+                <span>Connect Wallet</span>
+                <ArrowRightIcon className="w-5 h-5" />
               </button>
               <button
                 onClick={onClose}

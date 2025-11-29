@@ -89,15 +89,15 @@ function AuthenticatedLogin() {
   const { me, disconnect } = useAuth();
   const { isMetaKeysLoaded, hasEncryptedMetaKeys, isSessionLoadingComplete } = useMetaKeys();
   const router = useRouter();
-  
+
   // Get Aptos wallet
   const getAptosWallet = () => {
     if (typeof window === "undefined") return null;
     return (window as any).aptos;
   };
-  
+
   const [aptosAccount, setAptosAccount] = useState<string | null>(null);
-  
+
   useEffect(() => {
     const checkWallet = async () => {
       const wallet = getAptosWallet();
@@ -468,7 +468,7 @@ function WelcomeScreen({
                       </div>
                     )}
                     {!isCheckingWallet && !aptosAccount && (
-                      <MainButton onClick={onConnect} className="w-full h-16">
+                      <MainButton onClick={onConnect} className="w-full h-16 bg-green-600 hover:bg-green-400 text-white">
                         Connect Wallet
                       </MainButton>
                     )}
@@ -565,7 +565,7 @@ function WelcomeScreen({
                       </div>
                     )}
                     {!isCheckingWallet && !aptosAccount && (
-                      <MainButton onClick={onConnect} className="h-14 rounded-2xl w-full">
+                      <MainButton onClick={onConnect} className="h-14 rounded-2xl w-full bg-green-600 hover:bg-green-400 text-white">
                         Connect Wallet
                       </MainButton>
                     )}
@@ -585,21 +585,21 @@ function WelcomeScreen({
               >
                 <InfoBadge
                   title={
-                      <span className="inline-flex items-center gap-0.5">
-                        Live on&nbsp;
-                        <span className="inline-flex items-center gap-0.5 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full px-1.5 py-0.5 text-white">
-                          Aptos
-                        </span>
-                        &nbsp;Testnet
+                    <span className="inline-flex items-center gap-0.5">
+                      Live on&nbsp;
+                      <span className="inline-flex items-center gap-0.5 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full px-1.5 py-0.5 text-white">
+                        Aptos
                       </span>
-                    }
-                    variant="neutral"
-                    className="w-full"
-                  >
-                    <div className="text-sm text-center text-gray-600">
-                      Don&apos;t forget to set your wallet to testnet.
-                    </div>
-                  </InfoBadge>
+                      &nbsp;Testnet
+                    </span>
+                  }
+                  variant="neutral"
+                  className="w-full"
+                >
+                  <div className="text-sm text-center text-gray-600">
+                    Don&apos;t forget to set your wallet to testnet.
+                  </div>
+                </InfoBadge>
               </motion.div>
             </div>
           </div>

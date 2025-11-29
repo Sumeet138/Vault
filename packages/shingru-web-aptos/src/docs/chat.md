@@ -95,10 +95,27 @@ export async function POST(request) {
 ### 2. MongoDB Integration Functions
 ```javascript
 // lib/mongodb/rwa.js
-export async function getAssetsFromDB() { /* returns active assets */ }
-export async function getUserPortfolioFromDB(userId) { /* returns user holdings */ }
-export async function getTransactionHistory(userId) { /* returns purchase history */ }
-export async function getAssetById(assetId) { /* returns specific asset info */ }
+import { MongoClient } from 'mongodb';
+
+// Use NEXT_MONGODB_URI from environment variables
+const client = new MongoClient(process.env.NEXT_MONGODB_URI);
+const db = client.db('vault-rwa');
+
+export async function getAssetsFromDB() {
+  return await db.collection('assets').find({ status: 'ACTIVE' }).toArray();
+}
+
+export async function getUserPortfolioFromDB(userId) {
+  return await db.collection('holdings').find({ userId }).toArray();
+}
+
+export async function getTransactionHistory(userId) {
+  return await db.collection('transactions').find({ buyerUserId: userId }).toArray();
+}
+
+export async function getAssetById(assetId) {
+  return await db.collection('assets').findOne({ assetId });
+}
 ```
 
 ## Agentic AI Features

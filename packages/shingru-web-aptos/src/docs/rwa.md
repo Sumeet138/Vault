@@ -65,6 +65,28 @@ User Wallet → Stealth Address → RWA Purchase → MongoDB Share Tracking
 - **Payment Processing**: Extends existing payment recording API
 - **Balance Tracking**: Adds RWA shares alongside APT balances
 
+### 5. MongoDB Connection Configuration
+```javascript
+// lib/mongodb/rwa.js
+import { MongoClient } from 'mongodb';
+
+// Use NEXT_MONGODB_URI from environment variables
+const client = new MongoClient(process.env.NEXT_MONGODB_URI);
+const db = client.db('vault-rwa');
+
+export async function getAssetsFromDB() {
+  return await db.collection('assets').find({ status: 'ACTIVE' }).toArray();
+}
+
+export async function getUserPortfolioFromDB(userId) {
+  return await db.collection('holdings').find({ userId }).toArray();
+}
+
+export async function getTransactionHistory(userId) {
+  return await db.collection('transactions').find({ buyerUserId: userId }).toArray();
+}
+```
+
 ## AI Integration
 - AI assistant knows all available assets and their real-time availability
 - Generates personalized payment links based on user requests

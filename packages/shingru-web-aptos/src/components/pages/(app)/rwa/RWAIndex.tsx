@@ -28,7 +28,6 @@ export default function RWAIndex() {
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [activeTab, setActiveTab] = useState<"assets" | "portfolio">("assets");
 
   // Fetch assets
@@ -38,11 +37,6 @@ export default function RWAIndex() {
       const data = await response.json();
       if (data.success) {
         setAssets(data.data || []);
-      } else if (data.error && data.error.includes("seed")) {
-        // If seeding is needed, show a message
-        console.warn("Database needs seeding:", data.error);
-        setAssets([]);
-      }
     } catch (error) {
       console.error("Error fetching assets:", error);
       setAssets([]);
@@ -149,7 +143,7 @@ export default function RWAIndex() {
 
   return (
     <>
-      <div className="w-full max-w-lg mx-auto relative md:py-3 pt-5">
+      <div className="w-full max-w-6xl mx-auto relative md:py-3 pt-5 px-4">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-3">
@@ -168,36 +162,48 @@ export default function RWAIndex() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-3 mb-8">
-          <CuteButton
-            variant={activeTab === "assets" ? "solid" : "ghost"}
-            color={activeTab === "assets" ? "primary" : "gray"}
-            size="lg"
-            radius="lg"
-            onPress={() => setActiveTab("assets")}
-            className={activeTab === "assets" ? "shadow-md" : ""}
+        <div className="flex gap-2 mb-8 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab("assets")}
+            className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all relative ${
+              activeTab === "assets"
+                ? "text-primary-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
           >
-            <span className="flex items-center gap-2">
-              <SparklesIcon className="w-5 h-5" />
-              <span className="font-semibold">Browse Assets</span>
-            </span>
-          </CuteButton>
-          <CuteButton
-            variant={activeTab === "portfolio" ? "solid" : "ghost"}
-            color={activeTab === "portfolio" ? "primary" : "gray"}
-            size="lg"
-            radius="lg"
-            onPress={() => {
+            <SparklesIcon className="w-5 h-5" />
+            <span>Browse Assets</span>
+            {activeTab === "assets" && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"
+                initial={false}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            )}
+          </button>
+          <button
+            onClick={() => {
               setActiveTab("portfolio");
               fetchPortfolioWithAssets();
             }}
-            className={activeTab === "portfolio" ? "shadow-md" : ""}
+            className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all relative ${
+              activeTab === "portfolio"
+                ? "text-primary-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
           >
-            <span className="flex items-center gap-2">
-              <WalletIcon className="w-5 h-5" />
-              <span className="font-semibold">My Portfolio</span>
-            </span>
-          </CuteButton>
+            <WalletIcon className="w-5 h-5" />
+            <span>My Portfolio</span>
+            {activeTab === "portfolio" && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"
+                initial={false}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            )}
+          </button>
         </div>
 
         {/* Content */}
@@ -215,57 +221,19 @@ export default function RWAIndex() {
                   <div className="loading loading-spinner size-8" />
                 </div>
               ) : assets.length === 0 ? (
-                <div className="text-center py-12 px-4">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                      <BuildingOfficeIcon className="w-10 h-10 text-primary-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      No Assets Available
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                      The database needs to be seeded with initial assets. Click below to populate it with sample properties.
-                    </p>
-                    <CuteButton
-                      color="primary"
-                      variant="solid"
-                      size="lg"
-                      isLoading={isSeeding}
-                      onPress={async () => {
-                        setIsSeeding(true);
-                        try {
-                          const response = await fetch("/api/rwa/seed-now", {
-                            method: "POST",
-                          });
-                          const data = await response.json();
-                          if (data.success) {
-                            // Refresh assets immediately
-                            await fetchAssets();
-                            setIsSeeding(false);
-                          } else {
-                            alert(`Failed to seed: ${data.error}`);
-                            setIsSeeding(false);
-                          }
-                        } catch (error) {
-                          console.error("Error seeding:", error);
-                          const errorMsg = data?.error || "Failed to seed database. Please check your MongoDB connection.";
-                          const hint = data?.hint || "";
-                          alert(`${errorMsg}${hint ? `\n\n${hint}` : ""}`);
-                          setIsSeeding(false);
-                        }
-                      }}
-                      className="min-w-[200px] shadow-lg"
-                    >
-                      {isSeeding ? "Seeding Database..." : "✨ Seed Database Now"}
-                    </CuteButton>
-                  </motion.div>
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 flex items-center justify-center">
+                    <BuildingOfficeIcon className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No Assets Available
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Check back later for new investment opportunities
+                  </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {assets.map((asset) => (
                     <AssetCard
                       key={asset.assetId}

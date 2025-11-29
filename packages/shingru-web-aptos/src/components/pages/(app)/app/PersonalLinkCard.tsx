@@ -34,21 +34,59 @@ function PersonalLinkCard() {
   // Animation states
   const [isCopied, setIsCopied] = useState(false);
 
-  // Generate the personal link URL using linkPreview
-  const personalLinkUrl = personalLink?.linkPreview
-    ? `${window.location.origin}${personalLink.linkPreview}`
+  // Generate the personal link URL using linkPreview, with fallback to username
+  const linkPreviewPath = personalLink?.linkPreview || 
+    (me?.username ? `/${me.username}` : "");
+  const personalLinkUrl = linkPreviewPath 
+    ? `${window.location.origin}${linkPreviewPath}`
     : "";
 
   // Copy link to clipboard
-  const handleCopyLink = async () => {
-    if (personalLinkUrl && !isCopied) {
-      try {
+  const handleCopyLink = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    
+    if (!personalLinkUrl || isCopied) {
+      console.warn("Copy link: Cannot copy - personalLinkUrl:", personalLinkUrl, "isCopied:", isCopied);
+      return;
+    }
+
+    console.log("Copying personal link:", personalLinkUrl);
+
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(personalLinkUrl);
-        console.log("✅ Copied to clipboard:", personalLinkUrl);
+        console.log("✅ Successfully copied to clipboard");
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
-      } catch (error) {
-        console.error("❌ Failed to copy to clipboard:", error);
+      } else {
+        throw new Error("Clipboard API not available");
+      }
+    } catch (error) {
+      console.error("❌ Clipboard API failed, trying fallback:", error);
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = personalLinkUrl;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          console.log("✅ Successfully copied using fallback method");
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 2000);
+        } else {
+          console.error("❌ Fallback copy method failed");
+        }
+      } catch (fallbackError) {
+        console.error("❌ Both copy methods failed:", fallbackError);
       }
     }
   };

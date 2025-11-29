@@ -44,6 +44,16 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const [announcementModalOpen, setAnnouncementModalOpen] = useState(false);
 
+  // Helper function to check if a pathname matches a route (handles nested routes)
+  const isRouteActive = (href: string, currentPathname: string) => {
+    if (href === "/app") {
+      // Home route should only match exactly "/app"
+      return currentPathname === "/app";
+    }
+    // For other routes, check if pathname starts with the href
+    return currentPathname === href || currentPathname.startsWith(href + "/");
+  };
+
   return (
     <div className="hidden md:flex w-64 h-full flex-shrink-0 border-r border-black/5 flex-col">
       <div className="flex-1">
@@ -60,14 +70,16 @@ export default function AppSidebar() {
         {/* Menus */}
         <nav className="mt-4 px-3 font-sans">
           <div className="flex flex-col gap-1">
-            {MENUS.map((item, idx) => (
+            {MENUS.map((item, idx) => {
+              const isActive = isRouteActive(item.path, pathname);
+              return (
               <Link
                 key={idx}
                 href={item.path}
                 className={cnm(
                   "group flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition duration-100",
                   "hover:bg-gray-50 hover:text-gray-900",
-                  item.path === pathname
+                  isActive
                     ? "bg-gray-50 text-gray-900 font-medium"
                     : "text-gray-400 hover:bg-gray-50"
                 )}
@@ -78,7 +90,8 @@ export default function AppSidebar() {
 
                 <span className="font-medium">{item.title}</span>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </nav>
       </div>

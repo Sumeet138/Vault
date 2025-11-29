@@ -46,6 +46,16 @@ export default function MobileBottomNav() {
     return pathsToHide.some((pattern) => pattern.test(pathname));
   }, [pathname]);
 
+  // Helper function to check if a pathname matches a route (handles nested routes)
+  const isRouteActive = (href: string, currentPathname: string) => {
+    if (href === "/app") {
+      // Home route should only match exactly "/app"
+      return currentPathname === "/app";
+    }
+    // For other routes, check if pathname starts with the href
+    return currentPathname === href || currentPathname.startsWith(href + "/");
+  };
+
   return (
     <motion.div
       initial="hidden"
@@ -63,7 +73,7 @@ export default function MobileBottomNav() {
         <ul className="flex items-center justify-around">
           <AnimatePresence>
             {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = isRouteActive(item.href, pathname);
               const IconComponent = item.icon;
 
               return (

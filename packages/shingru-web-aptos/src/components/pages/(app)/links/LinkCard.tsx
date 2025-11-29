@@ -30,18 +30,61 @@ export default function LinkCard({
   const router = useRouter();
   const [isCopied, setIsCopied] = useState(false);
 
-  // Copy link to clipboard
-  const handleCopyLink = async () => {
-    if (isCopied) return;
+  // Generate link preview path - fallback to constructing from username and tag
+  const linkPreviewPath = link.linkPreview || 
+    (link.user?.username 
+      ? `/${link.user.username}${link.tag ? `/${link.tag}` : ""}`
+      : "");
 
-    const linkUrl = `${window.location.origin}${link.linkPreview}`;
+  // Copy link to clipboard
+  const handleCopyLink = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    
+    if (isCopied || !linkPreviewPath) {
+      console.warn("Copy link: Cannot copy - isCopied:", isCopied, "linkPreviewPath:", linkPreviewPath);
+      return;
+    }
+
+    const linkUrl = `${window.location.origin}${linkPreviewPath}`;
+    console.log("Copying link:", linkUrl);
 
     try {
-      await navigator.clipboard.writeText(linkUrl);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch {
-      // Error handled silently
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(linkUrl);
+        console.log("✅ Successfully copied to clipboard");
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } else {
+        // Fallback for older browsers
+        throw new Error("Clipboard API not available");
+      }
+    } catch (error) {
+      console.error("❌ Clipboard API failed, trying fallback:", error);
+      // Fallback for older browsers or when clipboard API fails
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = linkUrl;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          console.log("✅ Successfully copied using fallback method");
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 2000);
+        } else {
+          console.error("❌ Fallback copy method failed");
+        }
+      } catch (fallbackError) {
+        console.error("❌ Both copy methods failed:", fallbackError);
+      }
     }
   };
 
@@ -118,7 +161,7 @@ export default function LinkCard({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <LinkIcon className="size-4 opacity-40 flex-shrink-0" />
               <span className="text-xs font-semibold truncate">
-                {window.location.host}{link.linkPreview}
+                {window.location.host}{linkPreviewPath}
               </span>
             </div>
 
@@ -129,6 +172,7 @@ export default function LinkCard({
               <button
                 onClick={handleCopyLink}
                 disabled={isCopied}
+                type="button"
                 className="w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors"
               >
                 <AnimatePresence mode="wait">
@@ -249,7 +293,7 @@ export default function LinkCard({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <LinkIcon className="w-3 h-3 md:w-4 md:h-4 opacity-40 flex-shrink-0" />
               <span className="text-[10px] md:text-xs font-semibold truncate">
-                {window.location.host}{link.linkPreview}
+                {window.location.host}{linkPreviewPath}
               </span>
             </div>
 
@@ -257,6 +301,7 @@ export default function LinkCard({
               <button
                 onClick={handleCopyLink}
                 disabled={isCopied}
+                type="button"
                 className="cursor-pointer w-8 h-8 md:w-7 md:h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors relative touch-manipulation"
               >
                 <AnimatePresence mode="wait" initial={false}>

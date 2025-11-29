@@ -79,27 +79,62 @@ const LinkDetailHeader: React.FC<LinkDetailHeaderProps> = ({ link }) => {
     COLOR_PICKS.find((c) => c.id === link.backgroundColor) || COLOR_PICKS[0];
 
   console.log(link);
+  // Generate link preview path - fallback to constructing from username and tag
+  const linkPreviewPath = link.linkPreview || 
+    (link.user?.username 
+      ? `/${link.user.username}${link.tag ? `/${link.tag}` : ""}`
+      : "");
+  
   // Generate the link URL
-  const linkUrl = `${window.location.origin}${link.linkPreview}`;
+  const linkUrl = linkPreviewPath ? `${window.location.origin}${linkPreviewPath}` : "";
 
   // Copy to clipboard function
-  const handleCopyLink = async () => {
-    if (!linkUrl || copied) return;
+  const handleCopyLink = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    
+    if (!linkUrl || copied) {
+      console.warn("Copy link: Cannot copy - linkUrl:", linkUrl, "copied:", copied);
+      return;
+    }
+
+    console.log("Copying link:", linkUrl);
 
     try {
-      await navigator.clipboard.writeText(linkUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
-    } catch {
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(linkUrl);
+        console.log("✅ Successfully copied to clipboard");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        throw new Error("Clipboard API not available");
+      }
+    } catch (error) {
+      console.error("❌ Clipboard API failed, trying fallback:", error);
       // Fallback for older browsers
-      const textArea = document.createElement("textarea");
-      textArea.value = linkUrl;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = linkUrl;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          console.log("✅ Successfully copied using fallback method");
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } else {
+          console.error("❌ Fallback copy method failed");
+        }
+      } catch (fallbackError) {
+        console.error("❌ Both copy methods failed:", fallbackError);
+      }
     }
   };
 
@@ -207,7 +242,7 @@ const LinkDetailHeader: React.FC<LinkDetailHeaderProps> = ({ link }) => {
                     <div className="flex items-center gap-2 text-center sm:text-left">
                       <LinkIcon className="size-4" />
                       <p className="text-base font-semibold text-gray-900">
-                        {window.location.host}{link.linkPreview}
+                        {window.location.host}{linkPreviewPath}
                       </p>
                     </div>
 

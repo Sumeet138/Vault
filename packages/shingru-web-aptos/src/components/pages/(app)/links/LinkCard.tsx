@@ -30,18 +30,92 @@ export default function LinkCard({
   const router = useRouter();
   const [isCopied, setIsCopied] = useState(false);
 
-  // Copy link to clipboard
-  const handleCopyLink = async () => {
-    if (isCopied) return;
+  // Generate link preview path - fallback to constructing from username and tag
+  const linkPreviewPath = (link.linkPreview && link.linkPreview.trim() !== "") 
+    ? link.linkPreview
+    : (link.user?.username 
+        ? `/${link.user.username}${link.tag ? `/${link.tag}` : ""}`
+        : "");
+  
+  // Debug logging
+  if (!linkPreviewPath) {
+    console.warn("⚠️ LinkCard: No linkPreviewPath available", {
+      linkPreview: link.linkPreview,
+      username: link.user?.username,
+      tag: link.tag,
+      linkId: link.id
+    });
+  }
 
-    const linkUrl = `${window.location.origin}${link.linkPreview}`;
+  // Copy link to clipboard
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (isCopied || !linkPreviewPath) {
+      console.warn("Copy link: Cannot copy - isCopied:", isCopied, "linkPreviewPath:", linkPreviewPath);
+      return;
+    }
+
+    const linkUrl = `${window.location.origin}${linkPreviewPath}`;
+    console.log("📋 Copying link:", linkUrl);
+
+    // Check if we're in a secure context (HTTPS or localhost)
+    const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+    
+    if (!isSecureContext) {
+      console.warn("⚠️ Not in secure context, clipboard API may not work");
+    }
 
     try {
-      await navigator.clipboard.writeText(linkUrl);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch {
-      // Error handled silently
+      // Try modern clipboard API first (requires secure context and user gesture)
+      if (navigator.clipboard && navigator.clipboard.writeText && isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(linkUrl);
+          console.log("✅ Successfully copied to clipboard");
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 2000);
+          return;
+        } catch (clipboardError: any) {
+          // Check for permission denied error
+          if (clipboardError.name === 'NotAllowedError' || clipboardError.message?.includes('permission')) {
+            console.warn("⚠️ Clipboard permission denied, trying fallback");
+          } else {
+            throw clipboardError; // Re-throw to trigger fallback
+          }
+        }
+      }
+      
+      // Fallback method (works in all contexts)
+      console.log("🔄 Using fallback copy method");
+      const textArea = document.createElement("textarea");
+      textArea.value = linkUrl;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      textArea.style.opacity = "0";
+      textArea.setAttribute('readonly', '');
+      document.body.appendChild(textArea);
+      
+      // Select and copy
+      textArea.select();
+      textArea.setSelectionRange(0, 99999); // For mobile devices
+      
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        console.log("✅ Successfully copied using fallback method");
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } else {
+        console.error("❌ Fallback copy method failed - execCommand returned false");
+        alert(`Failed to copy link. Please copy manually:\n${linkUrl}`);
+      }
+    } catch (error: any) {
+      console.error("❌ Copy failed:", error);
+      // Show user-friendly error
+      alert(`Failed to copy link. Please copy manually:\n${linkUrl}`);
     }
   };
 
@@ -118,7 +192,7 @@ export default function LinkCard({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <LinkIcon className="size-4 opacity-40 flex-shrink-0" />
               <span className="text-xs font-semibold truncate">
-                {window.location.host}{link.linkPreview}
+                {window.location.host}{linkPreviewPath}
               </span>
             </div>
 
@@ -127,9 +201,10 @@ export default function LinkCard({
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={handleCopyLink}
-                disabled={isCopied}
-                className="w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors"
+                onClick={(e) => handleCopyLink(e)}
+                disabled={isCopied || !linkPreviewPath}
+                type="button"
+                className="w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -249,15 +324,16 @@ export default function LinkCard({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <LinkIcon className="w-3 h-3 md:w-4 md:h-4 opacity-40 flex-shrink-0" />
               <span className="text-[10px] md:text-xs font-semibold truncate">
-                {window.location.host}{link.linkPreview}
+                {window.location.host}{linkPreviewPath}
               </span>
             </div>
 
             <div className="hidden md:flex flex-row items-center gap-0.5 md:gap-1 ml-2">
               <button
-                onClick={handleCopyLink}
-                disabled={isCopied}
-                className="cursor-pointer w-8 h-8 md:w-7 md:h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors relative touch-manipulation"
+                onClick={(e) => handleCopyLink(e)}
+                disabled={isCopied || !linkPreviewPath}
+                type="button"
+                className="cursor-pointer w-8 h-8 md:w-7 md:h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors relative touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div

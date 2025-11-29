@@ -656,8 +656,43 @@ export default function UserProvider({ children }: UserProviderProps) {
       // Backend-less: Load links from local storage
       const storedLinks = localStorage.getItem("shingru-links");
       if (storedLinks) {
-        const links = JSON.parse(storedLinks);
-        setLinks(links);
+        let links: Link[];
+        try {
+          links = JSON.parse(storedLinks);
+        } catch (parseError) {
+          console.error("Failed to parse links from localStorage:", parseError);
+          console.error("Corrupted data:", storedLinks.substring(0, 100));
+          // Clear corrupted data and start fresh
+          localStorage.removeItem("shingru-links");
+          setLinks([]);
+          setLinksLoading(false);
+          return;
+        }
+        
+        // Ensure all links have user object and linkPreview populated
+        const normalizedLinks = links.map((link) => {
+          // Generate linkPreview if missing
+          if (!link.linkPreview || link.linkPreview.trim() === "") {
+            const username = link.user?.username || me?.username;
+            if (username) {
+              link.linkPreview = `/${username}${link.tag ? `/${link.tag}` : ""}`;
+            }
+          }
+          
+          // Ensure user object exists
+          if (!link.user || !link.user.username) {
+            link.user = {
+              id: me?.id || "",
+              username: me?.username || "",
+            };
+          }
+          
+          return link;
+        });
+        
+        // Save normalized links back to localStorage
+        localStorage.setItem("shingru-links", JSON.stringify(normalizedLinks));
+        setLinks(normalizedLinks);
       } else {
         setLinks([]);
       }
@@ -669,7 +704,7 @@ export default function UserProvider({ children }: UserProviderProps) {
     } finally {
       setLinksLoading(false);
     }
-  }, [backendToken]);
+  }, [backendToken, me]);
 
   // Refresh links
   const refreshLinks = useCallback(async () => {
@@ -687,21 +722,37 @@ export default function UserProvider({ children }: UserProviderProps) {
   // Backend-less: Create link and store in local storage
   const createLink = useCallback(
     async (data: CreateLinkRequest): Promise<Link | null> => {
-      if (!backendToken) {
+      if (!backendToken || !me?.username) {
+        console.error("Cannot create link: missing backendToken or username");
         return null;
       }
 
       try {
+        // Generate linkPreview from username and tag
+        const linkPreview = `/${me.username}${data.tag ? `/${data.tag}` : ""}`;
+        
         // Backend-less: Create link locally
         const newLink: Link = {
           ...data,
           id: `local_${Date.now()}_${Math.random().toString(36).substring(7)}`,
           userId: backendToken,
+          linkPreview: linkPreview, // Always set linkPreview
+          user: {
+            id: me.id || "",
+            username: me.username, // Always set user object
+          },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           status: "ACTIVE",
           isActive: true,
+          activities: [], // Initialize activities array
+          stats: {
+            viewCount: 0,
+            totalPayments: 0,
+          },
         };
+        
+        console.log("✅ Creating link with linkPreview:", linkPreview, "for user:", me.username);
         
         // Save to local storage
         const storedLinks = localStorage.getItem("shingru-links");
@@ -716,7 +767,7 @@ export default function UserProvider({ children }: UserProviderProps) {
         return null;
       }
     },
-    [backendToken]
+    [backendToken, me]
   );
 
   // Backend-less: Update link in local storage

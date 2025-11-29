@@ -54,6 +54,12 @@ export default function HeroSection() {
   const controls = useAnimation()
   const phoneControls = useAnimation()
   const isMounted = useIsMounted()
+  const isMountedRef = useRef(false)
+  
+  // Track mounted state with ref for async functions
+  useEffect(() => {
+    isMountedRef.current = isMounted
+  }, [isMounted])
 
   useEffect(() => {
     if (!isMounted) return
@@ -95,29 +101,60 @@ export default function HeroSection() {
     if (!textElement) return
 
     const measureAndAnimate = async () => {
+      // Check if component is still mounted before each animation call
+      if (!isMountedRef.current) return
+      
       const width = textElement.scrollWidth
 
       if (isInitialRun) {
+        if (!isMountedRef.current) return
         controls.set({ width })
         if (canStartMarquee) {
           await new Promise((resolve) => setTimeout(resolve, 2000))
-          await controls.start({
-            width: 0,
-            transition: { duration: 0.8, ease: EASE_OUT_QUART },
-          })
+          if (!isMountedRef.current) return
+          try {
+            await controls.start({
+              width: 0,
+              transition: { duration: 0.8, ease: EASE_OUT_QUART },
+            })
+          } catch (error) {
+            // Component may have unmounted, ignore error
+            if (isMountedRef.current) {
+              console.warn("Animation error (component may have unmounted):", error)
+            }
+            return
+          }
+          if (!isMountedRef.current) return
           setCurrentProfileIndex((prev) => (prev + 1) % profiles.length)
           setIsInitialRun(false)
         }
       } else {
-        await controls.start({
-          width: width,
-          transition: { duration: 1, ease: EASE_OUT_QUART },
-        })
+        if (!isMountedRef.current) return
+        try {
+          await controls.start({
+            width: width,
+            transition: { duration: 1, ease: EASE_OUT_QUART },
+          })
+        } catch (error) {
+          if (isMountedRef.current) {
+            console.warn("Animation error:", error)
+          }
+          return
+        }
         await new Promise((resolve) => setTimeout(resolve, 2000))
-        await controls.start({
-          width: 0,
-          transition: { duration: 0.7, ease: EASE_OUT_QUART },
-        })
+        if (!isMountedRef.current) return
+        try {
+          await controls.start({
+            width: 0,
+            transition: { duration: 0.7, ease: EASE_OUT_QUART },
+          })
+        } catch (error) {
+          if (isMountedRef.current) {
+            console.warn("Animation error:", error)
+          }
+          return
+        }
+        if (!isMountedRef.current) return
         setCurrentProfileIndex((prev) => (prev + 1) % profiles.length)
       }
     }
@@ -125,7 +162,7 @@ export default function HeroSection() {
     if (canStartMarquee) {
       measureAndAnimate()
     } else {
-      if (textRef.current) {
+      if (textRef.current && isMounted) {
         controls.set({ width: textRef.current.scrollWidth })
       }
     }

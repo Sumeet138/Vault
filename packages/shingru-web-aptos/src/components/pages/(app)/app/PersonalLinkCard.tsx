@@ -34,22 +34,82 @@ function PersonalLinkCard() {
   // Animation states
   const [isCopied, setIsCopied] = useState(false);
 
-  // Generate the personal link URL using linkPreview
-  const personalLinkUrl = personalLink?.linkPreview
-    ? `${window.location.origin}${personalLink.linkPreview}`
+  // Generate the personal link URL using linkPreview, with fallback to username
+  const linkPreviewPath = (personalLink?.linkPreview && personalLink.linkPreview.trim() !== "")
+    ? personalLink.linkPreview
+    : (me?.username ? `/${me.username}` : "");
+  const personalLinkUrl = linkPreviewPath && linkPreviewPath.trim() !== ""
+    ? `${window.location.origin}${linkPreviewPath}`
     : "";
 
   // Copy link to clipboard
-  const handleCopyLink = async () => {
-    if (personalLinkUrl && !isCopied) {
-      try {
-        await navigator.clipboard.writeText(personalLinkUrl);
-        console.log("✅ Copied to clipboard:", personalLinkUrl);
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (!personalLinkUrl || isCopied) {
+      console.warn("Copy link: Cannot copy - personalLinkUrl:", personalLinkUrl, "isCopied:", isCopied);
+      return;
+    }
+
+    console.log("📋 Copying personal link:", personalLinkUrl);
+
+    // Check if we're in a secure context (HTTPS or localhost)
+    const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+    
+    if (!isSecureContext) {
+      console.warn("⚠️ Not in secure context, clipboard API may not work");
+    }
+
+    try {
+      // Try modern clipboard API first (requires secure context and user gesture)
+      if (navigator.clipboard && navigator.clipboard.writeText && isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(personalLinkUrl);
+          console.log("✅ Successfully copied to clipboard");
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 2000);
+          return;
+        } catch (clipboardError: any) {
+          // Check for permission denied error
+          if (clipboardError.name === 'NotAllowedError' || clipboardError.message?.includes('permission')) {
+            console.warn("⚠️ Clipboard permission denied, trying fallback");
+          } else {
+            throw clipboardError; // Re-throw to trigger fallback
+          }
+        }
+      }
+      
+      // Fallback method (works in all contexts)
+      console.log("🔄 Using fallback copy method");
+      const textArea = document.createElement("textarea");
+      textArea.value = personalLinkUrl;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      textArea.style.opacity = "0";
+      textArea.setAttribute('readonly', '');
+      document.body.appendChild(textArea);
+      
+      // Select and copy
+      textArea.select();
+      textArea.setSelectionRange(0, 99999); // For mobile devices
+      
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        console.log("✅ Successfully copied using fallback method");
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
-      } catch (error) {
-        console.error("❌ Failed to copy to clipboard:", error);
+      } else {
+        console.error("❌ Fallback copy method failed - execCommand returned false");
+        alert(`Failed to copy link. Please copy manually:\n${personalLinkUrl}`);
       }
+    } catch (error: any) {
+      console.error("❌ Copy failed:", error);
+      // Show user-friendly error
+      alert(`Failed to copy link. Please copy manually:\n${personalLinkUrl}`);
     }
   };
 
@@ -158,9 +218,10 @@ function PersonalLinkCard() {
 
             <div className="flex flex-row items-center gap-2">
               <button
-                className="cursor-pointer size-7 md:size-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors relative"
-                onClick={handleCopyLink}
-                disabled={isCopied}
+                className="cursor-pointer size-7 md:size-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={(e) => handleCopyLink(e)}
+                disabled={isCopied || !personalLinkUrl}
+                type="button"
               >
                 <AnimatePresence>
                   {isCopied ? (

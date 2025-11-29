@@ -132,8 +132,23 @@ function PayContextProvider({
 
         console.log("👤 User query result:", { userData, userError })
 
-        if (userError || !userData) {
-          console.error("❌ User not found:", userError)
+        // Handle errors more gracefully
+        if (userError) {
+          console.error("❌ Error fetching user:", userError)
+          // Check if it's a "not found" error (PGRST116) or a real error
+          if (userError.code === 'PGRST116') {
+            console.warn("⚠️ User not found in database (username may not exist yet)")
+            setError("User not found")
+          } else {
+            console.error("❌ Database error:", userError)
+            setError("Failed to load user data. Please try again.")
+          }
+          setIsInitializing(false)
+          return
+        }
+
+        if (!userData) {
+          console.warn("⚠️ User not found (userData is null)")
           setError("User not found")
           setIsInitializing(false)
           return

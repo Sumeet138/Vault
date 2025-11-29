@@ -44,6 +44,16 @@ const MENUS = [
 export default function AppSidebar() {
   const mouseY = useMotionValue(Infinity);
 
+  // Helper function to check if a pathname matches a route (handles nested routes)
+  const isRouteActive = (href: string, currentPathname: string) => {
+    if (href === "/app") {
+      // Home route should only match exactly "/app"
+      return currentPathname === "/app";
+    }
+    // For other routes, check if pathname starts with the href
+    return currentPathname === href || currentPathname.startsWith(href + "/");
+  };
+
   return (
     <div className="hidden md:flex h-full flex-col items-center justify-center py-8 px-4 z-50 w-24 relative">
       {/* Branding */}

@@ -79,27 +79,86 @@ const LinkDetailHeader: React.FC<LinkDetailHeaderProps> = ({ link }) => {
     COLOR_PICKS.find((c) => c.id === link.backgroundColor) || COLOR_PICKS[0];
 
   console.log(link);
+  // Generate link preview path - fallback to constructing from username and tag
+  const linkPreviewPath = (link.linkPreview && link.linkPreview.trim() !== "") 
+    ? link.linkPreview
+    : (link.user?.username 
+        ? `/${link.user.username}${link.tag ? `/${link.tag}` : ""}`
+        : "");
+  
   // Generate the link URL
-  const linkUrl = `${window.location.origin}${link.linkPreview}`;
+  const linkUrl = linkPreviewPath && linkPreviewPath.trim() !== "" 
+    ? `${window.location.origin}${linkPreviewPath}` 
+    : "";
 
   // Copy to clipboard function
-  const handleCopyLink = async () => {
-    if (!linkUrl || copied) return;
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (!linkUrl || copied) {
+      console.warn("Copy link: Cannot copy - linkUrl:", linkUrl, "copied:", copied);
+      return;
+    }
+
+    console.log("📋 Copying link:", linkUrl);
+
+    // Check if we're in a secure context (HTTPS or localhost)
+    const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+    
+    if (!isSecureContext) {
+      console.warn("⚠️ Not in secure context, clipboard API may not work");
+    }
 
     try {
-      await navigator.clipboard.writeText(linkUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
-    } catch {
-      // Fallback for older browsers
+      // Try modern clipboard API first (requires secure context and user gesture)
+      if (navigator.clipboard && navigator.clipboard.writeText && isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(linkUrl);
+          console.log("✅ Successfully copied to clipboard");
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+          return;
+        } catch (clipboardError: any) {
+          // Check for permission denied error
+          if (clipboardError.name === 'NotAllowedError' || clipboardError.message?.includes('permission')) {
+            console.warn("⚠️ Clipboard permission denied, trying fallback");
+          } else {
+            throw clipboardError; // Re-throw to trigger fallback
+          }
+        }
+      }
+      
+      // Fallback method (works in all contexts)
+      console.log("🔄 Using fallback copy method");
       const textArea = document.createElement("textarea");
       textArea.value = linkUrl;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      textArea.style.opacity = "0";
+      textArea.setAttribute('readonly', '');
       document.body.appendChild(textArea);
+      
+      // Select and copy
       textArea.select();
-      document.execCommand("copy");
+      textArea.setSelectionRange(0, 99999); // For mobile devices
+      
+      const successful = document.execCommand("copy");
       document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+      
+      if (successful) {
+        console.log("✅ Successfully copied using fallback method");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        console.error("❌ Fallback copy method failed - execCommand returned false");
+        alert(`Failed to copy link. Please copy manually:\n${linkUrl}`);
+      }
+    } catch (error: any) {
+      console.error("❌ Copy failed:", error);
+      // Show user-friendly error
+      alert(`Failed to copy link. Please copy manually:\n${linkUrl}`);
     }
   };
 
@@ -207,13 +266,14 @@ const LinkDetailHeader: React.FC<LinkDetailHeaderProps> = ({ link }) => {
                     <div className="flex items-center gap-2 text-center sm:text-left">
                       <LinkIcon className="size-4" />
                       <p className="text-base font-semibold text-gray-900">
-                        {window.location.host}{link.linkPreview}
+                        {window.location.host}{linkPreviewPath}
                       </p>
                     </div>
 
                     <div className="flex gap-2 flex-row sm:items-center w-full md:w-auto">
                       <MainButton
                         onClick={handleCopyLink}
+                        disabled={copied || !linkUrl}
                         classNameContainer="w-full sm:w-auto flex-1"
                         className={cnm(
                           "min-h-9 text-xs font-semibold tracking-tight transition-colors px-4 w-full py-3",

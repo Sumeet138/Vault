@@ -1,5 +1,5 @@
 import { cnm } from "@/utils/style";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -15,7 +15,6 @@ interface AppNavbarProps {
 }
 
 function AppNavbar({ variant = "floating", className }: AppNavbarProps) {
-  const router = useRouter();
   const pathname = usePathname();
 
   const NAV_ITEMS = [
@@ -45,8 +44,18 @@ function AppNavbar({ variant = "floating", className }: AppNavbarProps) {
     },
   ];
 
+  // Helper function to check if a pathname matches a route (handles nested routes)
+  const isRouteActive = (href: string, currentPathname: string) => {
+    if (href === "/app") {
+      // Home route should only match exactly "/app"
+      return currentPathname === "/app";
+    }
+    // For other routes, check if pathname starts with the href
+    return currentPathname === href || currentPathname.startsWith(href + "/");
+  };
+
   // Find the active tab index
-  const activeIndex = NAV_ITEMS.findIndex((item) => pathname === item.href);
+  const activeIndex = NAV_ITEMS.findIndex((item) => isRouteActive(item.href, pathname));
 
   const containerClasses = cnm(
     "bg-white p-1 border border-black/5 shadow-lg w-full",
@@ -82,7 +91,7 @@ function AppNavbar({ variant = "floating", className }: AppNavbarProps) {
         />
 
         {NAV_ITEMS.map((item, index) => {
-          const isActive = pathname === item.href;
+          const isActive = isRouteActive(item.href, pathname);
           const IconComponent = item.icon;
 
           return (

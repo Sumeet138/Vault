@@ -489,51 +489,74 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [setBackendToken, setAuthMethod]);
 
-  // Auto-authenticate if wallet is connected and we have stored token/wallet
+  // Auto-authenticate if wallet is connected
+  // This handles two scenarios:
+  // 1. Wallet connected + stored auth data exists -> auto-authenticate if addresses match
+  // 2. Wallet connected + NO stored auth data (localStorage cleared) -> authenticate with connected wallet
   useEffect(() => {
     if (!isHydrated || isSigningIn || backendToken) return;
 
     const autoAuthenticate = async () => {
+      // Check if Petra wallet is connected
+      if (typeof window === "undefined") return;
+      const petra = (window as any).aptos;
+      if (!petra) {
+        return; // No wallet extension
+      }
+
+      let connectedAddress: string | null = null;
+      try {
+        const account = await petra.account();
+        connectedAddress = account?.address || null;
+      } catch (error) {
+        // Wallet not connected or error
+        console.log("Wallet not connected, skipping auto-auth");
+        return;
+      }
+
+      if (!connectedAddress) {
+        return; // No connected wallet
+      }
+
       // Check if we have stored token and wallet
       const storedToken = localStorage.getItem("shingru-access-token");
       const storedWallets = localStorage.getItem("shingru-wallets");
       
-      if (!storedToken || !storedWallets) {
-        return; // No stored auth data
-      }
-
-      try {
-        const parsedWallets = JSON.parse(storedWallets);
-        const aptosWallet = parsedWallets.find((w: any) => w.chain === "APTOS");
-        if (!aptosWallet) {
-          return; // No Aptos wallet stored
-        }
-
-        // Check if Petra wallet is connected
-        if (typeof window === "undefined") return;
-        const petra = (window as any).aptos;
-        if (!petra) {
-          return; // No wallet extension
-        }
-
+      if (storedToken && storedWallets) {
+        // Scenario 1: We have stored auth data - check if it matches connected wallet
         try {
-          const account = await petra.account();
-          if (account?.address) {
-            const connectedAddress = account.address.toLowerCase();
+          const parsedWallets = JSON.parse(storedWallets);
+          const aptosWallet = parsedWallets.find((w: any) => w.chain === "APTOS");
+          
+          if (aptosWallet) {
             const storedAddress = aptosWallet.address.toLowerCase();
+            const normalizedConnectedAddress = connectedAddress.toLowerCase();
             
             // If connected wallet matches stored wallet, auto-authenticate
-            if (connectedAddress === storedAddress) {
-              console.log("🔄 Auto-authenticating with connected wallet:", connectedAddress);
+            if (normalizedConnectedAddress === storedAddress) {
+              console.log("🔄 Auto-authenticating with connected wallet (stored data exists):", normalizedConnectedAddress);
               await authenticateWithAptos(connectedAddress);
+              return;
+            } else {
+              console.log("⚠️ Connected wallet doesn't match stored wallet. Stored:", storedAddress, "Connected:", normalizedConnectedAddress);
+              // Wallet mismatch - user might have switched wallets, authenticate with new wallet
+              console.log("🔄 Authenticating with new connected wallet:", normalizedConnectedAddress);
+              await authenticateWithAptos(connectedAddress);
+              return;
             }
           }
         } catch (error) {
-          // Wallet not connected or error, skip auto-auth
-          console.log("Wallet not connected, skipping auto-auth");
+          console.error("Error parsing stored wallets:", error);
+          // If stored data is corrupted, authenticate with connected wallet
+          console.log("🔄 Stored data corrupted, authenticating with connected wallet:", connectedAddress);
+          await authenticateWithAptos(connectedAddress);
+          return;
         }
-      } catch (error) {
-        console.error("Error in auto-authenticate:", error);
+      } else {
+        // Scenario 2: No stored auth data (localStorage was cleared) but wallet is connected
+        // Authenticate with the connected wallet
+        console.log("🔄 No stored auth data found, but wallet is connected. Authenticating:", connectedAddress);
+        await authenticateWithAptos(connectedAddress);
       }
     };
 

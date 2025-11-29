@@ -11,6 +11,10 @@ import StaticTokenInput from "./StaticTokenInput";
 import { userService, ChainId } from "@/lib/api/user";
 import { SupportedChain } from "@/config/chains";
 import { serializeFormattedStringToFloat } from "@/utils/formatting";
+import { useUserBalances } from "@/hooks/useUserBalance";
+import { formatUiNumber } from "@/utils/formatting";
+import { useContext } from "react";
+import { AuthContext } from "@/providers/AuthProvider";
 
 // Convert chain to API chain ID
 const getChainId = (chain: SupportedChain): ChainId => {
@@ -22,7 +26,22 @@ const getChainId = (chain: SupportedChain): ChainId => {
   }
 };
 
+// Safe useAuth hook that doesn't throw if AuthProvider is not available
+function useAuthSafe() {
+  const context = useContext(AuthContext);
+  // If context is undefined, AuthProvider is not available (e.g., on public payment pages)
+  if (context === undefined) {
+    return { me: null };
+  }
+  return context;
+}
+
 export default function PaymentInterface() {
+  const { me } = useAuthSafe();
+  const balanceResult = useUserBalances(me?.id || null);
+  const userBalances = balanceResult?.balances ?? [];
+  const balancesLoading = balanceResult?.loading ?? false;
+  
   const {
     selectedChain,
     wallet,
@@ -41,6 +60,30 @@ export default function PaymentInterface() {
     isWalletModalOpen,
     setIsWalletModalOpen,
   } = usePay();
+
+  // Get APT balance
+  const aptBalance = useMemo(() => {
+    if (!userBalances || !Array.isArray(userBalances) || userBalances.length === 0) {
+      return 0;
+    }
+    try {
+      const aptBalanceData = userBalances.find(
+        (b) => b?.token_symbol === "APT" || b?.token_address === "0x1::aptos_coin::AptosCoin"
+      );
+      if (!aptBalanceData || !aptBalanceData.balance || typeof aptBalanceData.decimals !== 'number') {
+        return 0;
+      }
+      const balanceNum = Number(aptBalanceData.balance);
+      const decimalsNum = Number(aptBalanceData.decimals);
+      if (isNaN(balanceNum) || isNaN(decimalsNum) || decimalsNum < 0) {
+        return 0;
+      }
+      return balanceNum / Math.pow(10, decimalsNum);
+    } catch (error) {
+      console.error('Error calculating APT balance:', error);
+      return 0;
+    }
+  }, [userBalances]);
 
   // Convert network-specific chains to wallet chains
   const getWalletChain = (chain: string): string => {
@@ -93,33 +136,41 @@ export default function PaymentInterface() {
       const rwaIntent = sessionStorage.getItem('rwa-purchase-intent');
       if (rwaIntent) {
         const purchaseInfo = JSON.parse(rwaIntent);
-        setRwaPurchaseInfo(purchaseInfo);
         
-        // Pre-fill amount if not already set and matches the tag
-        if (addressData?.linkData?.tag === purchaseInfo.assetId && !amount) {
-          // Convert APT to the format needed (assuming 8 decimals)
-          const amountInSmallestUnit = (purchaseInfo.totalCost * 1e8).toString();
-          setAmount(purchaseInfo.totalCost.toString());
+        // Validate purchase info structure
+        if (purchaseInfo && typeof purchaseInfo === 'object' && purchaseInfo.assetId && typeof purchaseInfo.totalCost === 'number') {
+          setRwaPurchaseInfo(purchaseInfo);
           
-          // Set token to APT if not already set
-          if (!selectedToken) {
-            setSelectedToken({
-              symbol: 'APT',
-              decimals: 8,
-              isNative: true,
-              address: '0x1::aptos_coin::AptosCoin',
-            });
+          // Pre-fill amount if matches the tag (always set for RWA purchases)
+          if (addressData?.linkData?.tag === purchaseInfo.assetId && purchaseInfo.totalCost) {
+            // Set the exact amount needed
+            setAmount(purchaseInfo.totalCost.toString());
+            
+            // Set token to APT if not already set
+            if (!selectedToken) {
+              setSelectedToken({
+                symbol: 'APT',
+                decimals: 8,
+                isNative: true,
+                address: '0x1::aptos_coin::AptosCoin',
+              });
+            }
           }
+        } else {
+          // Invalid purchase info, clear it
+          console.warn('Invalid RWA purchase intent data, clearing...');
+          sessionStorage.removeItem('rwa-purchase-intent');
         }
-        
-        // Clear the intent after using it
-        sessionStorage.removeItem('rwa-purchase-intent');
       }
     } catch (error) {
       console.error('Error reading RWA purchase intent:', error);
-      sessionStorage.removeItem('rwa-purchase-intent');
+      try {
+        sessionStorage.removeItem('rwa-purchase-intent');
+      } catch (e) {
+        // Ignore storage errors
+      }
     }
-  }, [addressData?.linkData?.tag, amount, setAmount, selectedToken, setSelectedToken]);
+  }, [addressData?.linkData?.tag, setAmount, selectedToken, setSelectedToken]);
 
   // Fetch balance for fixed token
   useEffect(() => {
@@ -277,6 +328,11 @@ export default function PaymentInterface() {
     async (txHash: string) => {
       console.log("Payment successful!", txHash);
 
+      // Clear RWA purchase intent after successful payment
+      if (rwaPurchaseInfo) {
+        sessionStorage.removeItem('rwa-purchase-intent');
+      }
+
       // Record payment with collect info data to backend
       try {
         const paymentData = {
@@ -325,6 +381,7 @@ export default function PaymentInterface() {
       addressData,
       paymentNote,
       collectInfoValidation,
+      rwaPurchaseInfo,
     ]
   );
 
@@ -355,7 +412,11 @@ export default function PaymentInterface() {
                     Real World Asset Purchase
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
-                    Purchasing {rwaPurchaseInfo.quantity} share{rwaPurchaseInfo.quantity !== 1 ? 's' : ''} at {rwaPurchaseInfo.pricePerShare} APT per share
+                    {rwaPurchaseInfo.quantity && rwaPurchaseInfo.pricePerShare ? (
+                      <>Purchasing {rwaPurchaseInfo.quantity} share{rwaPurchaseInfo.quantity !== 1 ? 's' : ''} at {rwaPurchaseInfo.pricePerShare} APT per share</>
+                    ) : (
+                      <>Real World Asset Purchase</>
+                    )}
                   </p>
                 </div>
               </div>
@@ -393,8 +454,44 @@ export default function PaymentInterface() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.4, ease: EASE_OUT_QUART }}
-              className="space-y-8"
+              className="space-y-6"
             >
+              {/* Balance Display */}
+              {me && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.02 }}
+                  className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl p-4 border border-primary-200"
+                >
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary-500 flex items-center justify-center shadow-sm flex-shrink-0">
+                        <span className="text-white text-sm font-bold">APT</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Your Balance</p>
+                        {balancesLoading ? (
+                          <div className="h-6 w-24 bg-gray-200 rounded animate-pulse mt-1" />
+                        ) : (
+                          <p className="text-xl font-bold text-gray-900">
+                            {formatUiNumber(aptBalance || 0, "APT", { maxDecimals: 6 })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {rwaPurchaseInfo && rwaPurchaseInfo.totalCost && (
+                      <div className="text-right">
+                        <p className="text-xs text-gray-600 font-medium">Required</p>
+                        <p className="text-xl font-bold text-primary-600">
+                          {formatUiNumber(rwaPurchaseInfo.totalCost, "APT", { maxDecimals: 6 })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
               {/* Amount Section */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}

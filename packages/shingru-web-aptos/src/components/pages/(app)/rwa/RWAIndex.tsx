@@ -339,16 +339,21 @@ export default function RWAIndex() {
               </div>
             </div>
 
-            {/* Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <p className="text-sm text-blue-800">
-                💡 You'll be redirected to a secure payment page. Your
-                purchase will be processed using stealth addresses for privacy.
-              </p>
-            </div>
-
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 pt-2">
+              <CuteButton
+                color="primary"
+                variant="solid"
+                size="lg"
+                fullWidth
+                radius="lg"
+                isDisabled={quantity > selectedAsset.availableShares || isProcessing}
+                isLoading={isProcessing}
+                onPress={handlePurchase}
+                className="shadow-md hover:shadow-lg transition-shadow"
+              >
+                Purchase Shares
+              </CuteButton>
               <CuteButton
                 variant="ghost"
                 color="gray"
@@ -357,19 +362,6 @@ export default function RWAIndex() {
                 onPress={() => setIsBuyModalOpen(false)}
               >
                 Cancel
-              </CuteButton>
-              <CuteButton
-                color="primary"
-                variant="solid"
-                size="lg"
-                fullWidth
-                isDisabled={quantity > selectedAsset.availableShares}
-                onPress={handlePurchase}
-              >
-                <span className="flex items-center gap-2">
-                  <span>Continue to Payment</span>
-                  <span>→</span>
-                </span>
               </CuteButton>
             </div>
           </div>

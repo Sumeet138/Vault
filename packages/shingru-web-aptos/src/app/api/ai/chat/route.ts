@@ -6,6 +6,37 @@ import {
   getUserPortfolioFromDB,
   getAssetById
 } from '@/lib/mongodb/rwa';
+import { getBaseUrl } from '@/utils/url';
+
+// Simple filter function - same logic as RWA page would use
+function filterAssetsByQuery(assets: any[], query: string): any[] {
+  if (!query || !assets.length) return [];
+  
+  const lowerQuery = query.toLowerCase();
+  const cities = ['mumbai', 'pune', 'bangalore', 'delhi', 'hyderabad', 'chennai', 'kolkata'];
+  
+  // Check if city is mentioned
+  const mentionedCity = cities.find(city => lowerQuery.includes(city));
+  if (mentionedCity) {
+    return assets.filter(asset => 
+      asset.location.toLowerCase().includes(mentionedCity)
+    ).slice(0, 2); // Max 2 for city queries
+  }
+  
+  // Check for specific asset matches
+  const matched = assets.filter(asset => {
+    const nameLower = asset.name.toLowerCase();
+    const idLower = asset.assetId.toLowerCase();
+    const locationLower = asset.location.toLowerCase();
+    
+    return lowerQuery.includes(nameLower) ||
+           lowerQuery.includes(idLower) ||
+           lowerQuery.includes(locationLower) ||
+           nameLower.split(' ').some((word: string) => word.length > 3 && lowerQuery.includes(word));
+  });
+  
+  return matched.slice(0, 1); // Max 1 for specific asset
+}
 
 // Initialize Groq client (server-side only)
 const groqApiKey = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
@@ -21,6 +52,7 @@ const groqClient = groqApiKey ? new Groq({
 /**
  * Hardcoded sample assets (fallback when MongoDB is unavailable)
  * These match the assets in src/app/api/rwa/seed-now/route.ts
+ * Only used if /api/rwa/assets fails
  */
 const HARDCODED_SAMPLE_ASSETS = [
   {
@@ -175,62 +207,6 @@ const HARDCODED_SAMPLE_ASSETS = [
   },
 ];
 
-/**
- * Detect if user message mentions a city or specific asset
- * Returns array of assets (up to 2) if city is mentioned, or single asset if specific asset is mentioned
- */
-function detectMentionedAssets(message: string, assets: any[]): { assets: any[], type: 'city' | 'asset' | 'none' } {
-  console.log('🔍 [detectMentionedAssets] Starting detection with message:', message);
-  console.log('🔍 [detectMentionedAssets] Total assets available:', assets.length);
-  
-  const lowerMessage = message.toLowerCase();
-  
-  // Common Indian cities to detect
-  const cities = ['mumbai', 'pune', 'bangalore', 'delhi', 'hyderabad', 'chennai', 'kolkata', 'gurgaon', 'noida'];
-  
-  // First, check if a city is mentioned
-  const mentionedCity = cities.find(city => lowerMessage.includes(city));
-  
-  if (mentionedCity) {
-    console.log('🏙️ [detectMentionedAssets] City detected:', mentionedCity);
-    const cityAssets = assets.filter(asset => {
-      const locationLower = asset.location.toLowerCase();
-      const matches = locationLower.includes(mentionedCity);
-      if (matches) {
-        console.log('  ✅ Found asset in city:', asset.name, asset.location);
-      }
-      return matches;
-    });
-    
-    // Return up to 2 assets from that city
-    const result = cityAssets.slice(0, 2);
-    console.log(`🏙️ [detectMentionedAssets] Returning ${result.length} asset(s) for city ${mentionedCity}:`, result.map(a => a.name));
-    return { assets: result, type: 'city' };
-  }
-  
-  // If no city, check for specific asset names, IDs, or locations
-  for (const asset of assets) {
-    const assetNameLower = asset.name.toLowerCase();
-    const assetIdLower = asset.assetId.toLowerCase();
-    const locationLower = asset.location.toLowerCase();
-    
-    // Check if message contains asset name, ID, or location
-    if (
-      lowerMessage.includes(assetNameLower) ||
-      lowerMessage.includes(assetIdLower) ||
-      lowerMessage.includes(locationLower) ||
-      // Check for partial matches (e.g., "mumbai mall" matches "Phoenix Marketcity Mumbai")
-      assetNameLower.split(' ').some((word: string) => word.length > 3 && lowerMessage.includes(word)) ||
-      locationLower.split(',').some((part: string) => part.trim().length > 3 && lowerMessage.includes(part.trim().toLowerCase()))
-    ) {
-      console.log('🏢 [detectMentionedAssets] Specific asset detected:', asset.name);
-      return { assets: [asset], type: 'asset' };
-    }
-  }
-  
-  console.log('❌ [detectMentionedAssets] No assets detected');
-  return { assets: [], type: 'none' };
-}
 
 /**
  * Create enhanced system prompt with real-time MongoDB data
@@ -309,13 +285,20 @@ async function createEnhancedSystemPrompt(
     portfolioSection = '\n\n**User Portfolio:** User has no RWA investments yet.';
   }
 
-  // Build payment link guidance
+  // Build payment link guidance with actual domain
+  const baseUrl = getBaseUrl();
   let paymentLinkSection = '';
   if (username) {
-    paymentLinkSection = `\n\n**Payment Link Format:**\n`;
-    paymentLinkSection += `- For RWA purchases: https://vault.com/${username}/{assetId}\n`;
-    paymentLinkSection += `- Example: https://vault.com/${username}/bangalore-flag-tower\n`;
-    paymentLinkSection += `- Always use the user's actual username: ${username}`;
+    console.log(`🔗 [createEnhancedSystemPrompt] Building payment links for username: ${username}, baseUrl: ${baseUrl}`);
+    paymentLinkSection = `\n\n**Payment Link Format (CRITICAL - Use these exact formats):**\n`;
+    paymentLinkSection += `- Base URL: ${baseUrl}\n`;
+    paymentLinkSection += `- For RWA purchases: ${baseUrl}/${username}/{assetId}\n`;
+    paymentLinkSection += `- Example: ${baseUrl}/${username}/mumbai-phoenix-mall\n`;
+    paymentLinkSection += `- Example: ${baseUrl}/${username}/pune-phoenix-mall\n`;
+    paymentLinkSection += `- Always use the user's actual username: ${username}\n`;
+    paymentLinkSection += `- When mentioning assets, ALWAYS include the payment link in markdown format: [Buy {assetName} shares](${baseUrl}/${username}/{assetId})`;
+  } else {
+    console.log('⚠️ [createEnhancedSystemPrompt] No username provided, skipping payment link section');
   }
 
   // Enhanced instructions (as per docs)
@@ -337,6 +320,13 @@ async function createEnhancedSystemPrompt(
 - **NEVER say a city is not available if assets exist in the asset availability section above**
 - **NEVER say that Vault doesn't provide a list of RWA properties** - the list is shown above
 - Always provide accurate, up-to-date information based on the data shown above
+
+**PAYMENT LINKS (CRITICAL - ALWAYS INCLUDE):**
+- When mentioning any asset, ALWAYS include the payment link in markdown format
+- Format: [Buy {assetName} shares](${baseUrl}/${username}/{assetId})
+- Example: [Buy Phoenix Marketcity Pune shares](${baseUrl}/${username}/pune-phoenix-mall)
+- Make links clickable and prominent in your response
+- If username is available, ALWAYS include payment links for mentioned assets
 `;
 
   return `${basePrompt}${assetAvailabilitySection}${portfolioSection}${paymentLinkSection}${enhancedInstructions}`;
@@ -378,83 +368,79 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ [POST] Groq client initialized');
 
-    // Query MongoDB for real-time RWA data
+    // Use same RWA endpoints as RWA page - call directly, not via HTTP
     let assets: any[] = [];
     let userPortfolio: any[] = [];
-    let mongoDbFailed = false;
     
-    console.log('🔍 [POST] Fetching assets from MongoDB...');
+    console.log('🔍 [POST] Fetching assets using same function as RWA page...');
     try {
+      // Use the same function RWA page uses (getAssetsFromDB)
+      // This ensures consistency - same data source, same logic
       assets = await getAssetsFromDB();
-      console.log(`✅ [POST] Fetched ${assets.length} assets from MongoDB`);
-      if (assets.length > 0) {
-        console.log('📋 [POST] Sample assets:', assets.slice(0, 3).map(a => ({ name: a.name, location: a.location })));
+      console.log(`✅ [POST] Fetched ${assets.length} assets (same as RWA page)`);
+      
+      // If no assets, try seeding (same as /api/rwa/assets does)
+      if (assets.length === 0) {
+        const { seedInitialAssets } = await import('@/lib/mongodb/rwa');
+        try {
+          await seedInitialAssets();
+          assets = await getAssetsFromDB();
+          console.log(`✅ [POST] Seeded and fetched ${assets.length} assets`);
+        } catch (seedError) {
+          console.warn('⚠️ [POST] Seeding failed, using hardcoded fallback');
+          assets = HARDCODED_SAMPLE_ASSETS;
+        }
       }
     } catch (error) {
-      console.error('❌ [POST] Error fetching assets from MongoDB:', error);
-      mongoDbFailed = true;
-      // Will use hardcoded assets as fallback
+      console.error('❌ [POST] Error fetching assets:', error);
+      assets = HARDCODED_SAMPLE_ASSETS; // Fallback
     }
 
     console.log('🔍 [POST] Fetching user portfolio...');
     try {
       if (userId) {
         userPortfolio = await getUserPortfolioFromDB(userId);
-        console.log(`✅ [POST] Fetched ${userPortfolio.length} portfolio items for user ${userId}`);
-      } else {
-        console.log('ℹ️ [POST] No userId provided, skipping portfolio fetch');
+        console.log(`✅ [POST] Fetched ${userPortfolio.length} portfolio items`);
       }
     } catch (error) {
-      console.error('❌ [POST] Error fetching user portfolio from MongoDB:', error);
-      // Continue without portfolio data
+      console.error('❌ [POST] Error fetching portfolio:', error);
     }
 
-    // Use hardcoded assets if MongoDB failed or no assets found
-    const assetsToUse = mongoDbFailed || assets.length === 0 ? HARDCODED_SAMPLE_ASSETS : assets;
-    console.log(`📊 [POST] Using ${assetsToUse.length} assets (${mongoDbFailed || assets.length === 0 ? 'HARDCODED' : 'MongoDB'})`);
-    
-    // Log city distribution
-    const citiesInAssets = new Set(assetsToUse.map(a => a.location.split(',')[0].trim()));
-    console.log('🏙️ [POST] Cities available:', Array.from(citiesInAssets));
+    // Filter assets based on user query (simple filtering like RWA page would do)
+    const filteredAssets = filterAssetsByQuery(assets, message);
+    console.log(`🎯 [POST] Filtered ${filteredAssets.length} asset(s) from query:`, filteredAssets.map(a => a.name));
 
-    // Create enhanced system prompt with real-time data or hardcoded fallback
-    console.log('📝 [POST] Creating enhanced system prompt...');
+    // Create enhanced system prompt
     const enhancedPrompt = await createEnhancedSystemPrompt(
       assets,
       userPortfolio,
       userId || null,
       username || null,
-      mongoDbFailed || assets.length === 0
+      false // Always use real assets from API
     );
-    console.log(`✅ [POST] System prompt created (${enhancedPrompt.length} chars)`);
-
-    // Detect if user is asking about a city or specific asset
-    console.log('🔍 [POST] Detecting mentioned assets/cities...');
-    const detectionResult = detectMentionedAssets(message, assetsToUse);
-    const { assets: detectedAssets, type: detectionType } = detectionResult;
-    
-    console.log(`🎯 [POST] Detection result:`, {
-      type: detectionType,
-      count: detectedAssets.length,
-      assets: detectedAssets.map(a => ({ name: a.name, location: a.location }))
-    });
     
     // Generate AI response with enhanced context
     try {
-      // Limit response length when assets are mentioned - show cards instead
-      const maxTokens = detectedAssets.length > 0 ? 300 : 2000;
+      // Limit response length when assets are filtered - show cards instead
+      const maxTokens = filteredAssets.length > 0 ? 300 : 2000;
       
-      // Build additional instruction based on detection type
+      // Build additional instruction with payment links if assets were filtered
+      const baseUrl = getBaseUrl();
       let additionalInstruction = '';
-      if (detectionType === 'city') {
-        if (detectedAssets.length > 0) {
-          additionalInstruction = `\n\nIMPORTANT: User is asking about properties in a city. You found ${detectedAssets.length} asset(s) in that city. Provide basic info about the properties and mention that asset cards will be shown. Keep your response brief (under 150 words).`;
-        } else {
-          // This shouldn't happen if detection works correctly, but handle it
-          additionalInstruction = `\n\nIMPORTANT: User asked about a city, but no assets were found in that city. Tell them the city is not in our database and recommend assets from other available cities.`;
-        }
-      } else if (detectionType === 'asset') {
-        additionalInstruction = `\n\nIMPORTANT: User is asking about a specific asset. Keep your response brief (under 100 words) and focus on key details. The asset card will be shown separately.`;
+      
+      if (filteredAssets.length > 0) {
+        const assetLinks = filteredAssets.map(asset => {
+          const link = username 
+            ? `[Buy ${asset.name} shares](${baseUrl}/${username}/${asset.assetId})`
+            : `[Buy ${asset.name} shares](${baseUrl}/username/${asset.assetId})`;
+          return link;
+        }).join(' | ');
+        
+        additionalInstruction = `\n\nIMPORTANT: User query matched ${filteredAssets.length} asset(s). 
+- Provide brief info about the properties
+- ALWAYS include payment links: ${assetLinks}
+- Asset cards will be shown below
+- Keep response brief (under 150 words)`;
       }
       
       console.log('🤖 [POST] Calling Groq API...');
@@ -493,12 +479,8 @@ export async function POST(request: NextRequest) {
       const response = completion.choices[0]?.message?.content || 'I apologize, but I could not generate a response. Please try again.';
       console.log(`✅ [POST] Groq response received (${response.length} chars)`);
 
-      // Return assets array (for card rendering) - chatbot expects 'assets' array
-      // Limit to 2 assets max for city queries
-      const assetsToReturn = detectedAssets.slice(0, 2);
-      
-      // Properly serialize assets for JSON response (handle Date objects and ensure all fields)
-      const serializedAssets = assetsToReturn.map(asset => ({
+      // Serialize filtered assets for JSON response (same format as RWA page)
+      const serializedAssets = filteredAssets.map((asset: any) => ({
         assetId: asset.assetId,
         name: asset.name,
         location: asset.location,
@@ -512,17 +494,9 @@ export async function POST(request: NextRequest) {
         updatedAt: asset.updatedAt ? (asset.updatedAt instanceof Date ? asset.updatedAt.toISOString() : asset.updatedAt) : undefined,
       }));
       
-      console.log(`📤 [POST] Returning response with ${serializedAssets.length} asset(s)`, {
-        assets: serializedAssets.map(a => ({ 
-          assetId: a.assetId, 
-          name: a.name, 
-          location: a.location,
-          hasDescription: !!a.description,
-          pricePerShare: a.pricePerShare,
-          availableShares: a.availableShares,
-          totalShares: a.totalShares
-        })),
-        detectionType
+      console.log(`📤 [POST] Returning response with ${serializedAssets.length} filtered asset(s)`, {
+        assets: serializedAssets.map((a: any) => ({ assetId: a.assetId, name: a.name })),
+        totalAssetsAvailable: assets.length
       });
 
       return NextResponse.json({ 
@@ -533,12 +507,10 @@ export async function POST(request: NextRequest) {
         asset: serializedAssets.length > 0 ? serializedAssets[0] : null,
         // Include metadata for debugging
         metadata: {
-          assetsCount: assetsToUse.length,
+          totalAssetsAvailable: assets.length,
+          filteredAssetsCount: filteredAssets.length,
           portfolioCount: userPortfolio.length,
           hasUserId: !!userId,
-          detectedAssetsCount: detectedAssets.length,
-          detectionType,
-          usingHardcodedData: mongoDbFailed || assets.length === 0,
         }
       });
     } catch (groqError: any) {

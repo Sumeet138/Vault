@@ -15,7 +15,7 @@ The system prompt is dynamically enhanced with real-time MongoDB data before eac
 
 ```javascript
 const enhancedSystemPrompt = `
-You are Vault RWA Assistant, an AI expert on the Vault privacy-first payment platform with RWA tokenization. 
+You are Agentic Trading, an intelligent AI trading assistant specializing in Real World Assets (RWA) on the Vault privacy-first payment platform. 
 Current asset availability (retrieved from MongoDB):
 ${assets.map(asset => `${asset.name}: ${asset.availableShares}/${asset.totalShares} shares available at ${asset.pricePerShare} APT per share`).join('\n')}
 

@@ -6,7 +6,7 @@ import { aiPrompt, GROQ_CONFIG, SUPPORTED_LANGUAGES } from "@/ai/aiPrompt"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import Groq from "groq-sdk"
-import { AuthContext } from "@/providers/AuthProvider"
+import { useAuth } from "@/providers/AuthProvider"
 import {
   ChevronDown,
   Maximize2,
@@ -148,11 +148,10 @@ const LanguageSelector = ({
                 onSelectLanguage(language.code)
                 setIsOpen(false)
               }}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
-                selectedLanguage === language.code
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${selectedLanguage === language.code
                   ? "bg-orange-50 font-medium"
                   : ""
-              }`}
+                }`}
             >
               <span className="block text-gray-800">{language.nativeName}</span>
               <span className="block text-xs text-gray-500">
@@ -237,9 +236,31 @@ const toggleButtonVariants: Variants = {
 }
 
 const ShingruChatbot: React.FC = () => {
-  // Safe auth hook that doesn't throw if AuthProvider is not available
-  const authContext = useContext(AuthContext)
-  const me = authContext?.me || null
+  // Use useAuth hook (same as RWAIndex) - will throw if not in AuthProvider, which is fine
+  let me = null;
+  let authError = false;
+  try {
+    const auth = useAuth();
+    me = auth.me;
+  } catch (error) {
+    // AuthProvider not available - this is fine for public pages
+    // Only log in development to avoid console noise
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('AuthProvider not available in chatbot context (this is normal for public pages)');
+    }
+    authError = true;
+  }
+
+  // HARDCODED FOR TESTING - remove in production
+  if (!me || !me.username) {
+    me = {
+      id: 'test-user-id',
+      username: 'ayux',
+      profileImage: null,
+    } as any;
+    console.log('🧪 [TESTING] Using hardcoded user: ayux');
+  }
+
   const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
@@ -249,13 +270,13 @@ const ShingruChatbot: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState("en")
   const [streamingContent, setStreamingContent] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
-  
+
   // RWA purchase modal state (exact same as RWA route)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
   const [isProcessing, setIsProcessing] = useState(false)
-  
+
   // Loading state for asset cards
   const [loadingAssets, setLoadingAssets] = useState<string[]>([])
 
@@ -319,7 +340,7 @@ const ShingruChatbot: React.FC = () => {
 
     try {
       let response: string
-      
+
       // Try using the API route first (with MongoDB integration)
       try {
         // Build conversation history (last 10 messages for context)
@@ -329,9 +350,9 @@ const ShingruChatbot: React.FC = () => {
             role: msg.sender === 'user' ? 'user' : 'assistant',
             content: msg.text
           }));
-        
+
         console.log('💬 [Chatbot] Sending conversation history:', conversationHistory.length, 'messages');
-        
+
         const apiResponse = await fetch('/api/ai/chat', {
           method: 'POST',
           headers: {
@@ -348,7 +369,7 @@ const ShingruChatbot: React.FC = () => {
         if (apiResponse.ok) {
           const data = await apiResponse.json()
           response = data.response || 'I apologize, but I could not generate a response. Please try again.'
-          
+
           // Handle assets array or legacy asset singular
           let assetsArray: any[] = [];
           if (data.assets && Array.isArray(data.assets) && data.assets.length > 0) {
@@ -357,13 +378,13 @@ const ShingruChatbot: React.FC = () => {
             // Backward compatibility: convert singular asset to array
             assetsArray = [data.asset];
           }
-          
+
           // Log for debugging with full asset details
           if (assetsArray.length > 0) {
             console.log('✅ [Chatbot] Received assets data:', {
               count: assetsArray.length,
-              assets: assetsArray.map((a: any) => ({ 
-                assetId: a.assetId, 
+              assets: assetsArray.map((a: any) => ({
+                assetId: a.assetId,
                 name: a.name,
                 location: a.location,
                 description: a.description ? a.description.substring(0, 50) + '...' : 'NO DESCRIPTION',
@@ -382,28 +403,28 @@ const ShingruChatbot: React.FC = () => {
               metadata: data.metadata
             });
           }
-          
+
           // Add AI response with asset data if present
           const aiMessage: Message = {
             text: response,
             sender: "ai",
             assets: assetsArray.length > 0 ? assetsArray : undefined,
           }
-          
+
           console.log('💬 [Chatbot] Adding message to chat:', {
             hasText: !!aiMessage.text,
             textLength: aiMessage.text?.length || 0,
             hasAssets: !!aiMessage.assets,
             assetsCount: aiMessage.assets?.length || 0
           });
-          
+
           setMessages((prev) => [...prev, aiMessage])
           return // Exit early since we've already added the message
         } else {
           // API route returned an error - parse the error response
           let errorMessage = 'API route failed';
           let errorDetails: any = null;
-          
+
           try {
             const errorData = await apiResponse.json();
             errorMessage = errorData.error || errorData.message || errorMessage;
@@ -432,7 +453,7 @@ const ShingruChatbot: React.FC = () => {
               errorMessage = `API route failed with status ${apiResponse.status}`;
             }
           }
-          
+
           // Throw error with details for better debugging
           throw new Error(`API route failed: ${errorMessage}`)
         }
@@ -443,12 +464,12 @@ const ShingruChatbot: React.FC = () => {
           message: apiError?.message,
           stack: apiError?.stack,
         });
-        
+
         // Check if it's a network error or API error
-        const isNetworkError = apiError?.message?.includes('fetch') || 
-                              apiError?.message?.includes('network') ||
-                              apiError?.name === 'TypeError';
-        
+        const isNetworkError = apiError?.message?.includes('fetch') ||
+          apiError?.message?.includes('network') ||
+          apiError?.name === 'TypeError';
+
         // Fallback to direct Groq client if API route is not available
         if (USE_GROQ && groqClient && !isNetworkError) {
           console.log('⚠️ API route unavailable, falling back to direct Groq client');
@@ -467,7 +488,7 @@ const ShingruChatbot: React.FC = () => {
             // Fall through to error message
           }
         }
-        
+
         // Show user-friendly error message
         if (apiError?.message?.includes('AI service not configured')) {
           response = "I'm sorry, but the AI service is not configured. Please set up your GROQ API key in the environment variables (GROQ_API_KEY or NEXT_PUBLIC_GROQ_API_KEY) to enable chat functionality."
@@ -552,22 +573,22 @@ const ShingruChatbot: React.FC = () => {
   const getSampleQuestions = (): string[] => {
     const questions: Record<string, string[]> = {
       en: [
-        "What RWA assets are available to buy?",
-        "What do I own in my portfolio?",
-        "How do I purchase RWA shares?",
-        "Which assets are nearly sold out?",
+        "Best properties to invest in Pune",
+        "Show me RWA assets in Mumbai",
+        "What properties are available in Bangalore?",
+        "Which assets have the best returns?",
       ],
       hi: [
-        "खरीदने के लिए कौन से RWA assets उपलब्ध हैं?",
-        "मेरे portfolio में क्या है?",
-        "मैं RWA shares कैसे खरीदूं?",
-        "कौन से assets लगभग बिक चुके हैं?",
+        "पुणे में निवेश के लिए सर्वश्रेष्ठ properties",
+        "मुंबई में RWA assets दिखाएं",
+        "बैंगलोर में कौन सी properties उपलब्ध हैं?",
+        "किन assets में सबसे अच्छा रिटर्न है?",
       ],
       bn: [
-        "কোন RWA assets কেনার জন্য উপলব্ধ?",
-        "আমার portfolio এ কি আছে?",
-        "আমি কিভাবে RWA shares কিনব?",
-        "কোন assets প্রায় বিক্রি হয়ে গেছে?",
+        "পুনেতে বিনিয়োগের জন্য সেরা properties",
+        "মুম্বাইতে RWA assets দেখান",
+        "বেঙ্গালুরুতে কোন properties উপলব্ধ?",
+        "কোন assets এর সবচেয়ে ভাল রিটার্ন আছে?",
       ],
     }
     return questions[selectedLanguage] || questions["en"]
@@ -582,17 +603,69 @@ const ShingruChatbot: React.FC = () => {
 
   // RWA purchase handlers (reused from RWAIndex)
   const handleBuyClick = (asset: Asset) => {
-    if (!me?.username) {
+    console.log('🛒 [Chatbot] handleBuyClick called:', {
+      hasMe: !!me,
+      meId: me?.id,
+      meUsername: me?.username,
+      assetId: asset.assetId,
+      assetName: asset.name
+    });
+
+    if (!me) {
+      console.error('❌ [Chatbot] No user object found');
       alert("Please log in to purchase assets")
       return
     }
+
+    if (!me.username) {
+      console.error('❌ [Chatbot] User has no username');
+      alert("Please complete your profile (username required) to purchase assets")
+      return
+    }
+
+    if (!me.id) {
+      console.error('❌ [Chatbot] User has no ID');
+      alert("Please log in to purchase assets")
+      return
+    }
+
+    console.log('✅ [Chatbot] Opening purchase modal for asset:', asset.name);
     setSelectedAsset(asset)
     setQuantity(1)
     setIsBuyModalOpen(true)
   }
 
   const handlePurchase = async () => {
-    if (!selectedAsset || !me?.id || !me?.username) return
+    console.log('💳 [Chatbot] handlePurchase called:', {
+      hasSelectedAsset: !!selectedAsset,
+      hasMe: !!me,
+      meId: me?.id,
+      meUsername: me?.username,
+      quantity
+    });
+
+    if (!selectedAsset) {
+      console.error('❌ [Chatbot] No asset selected');
+      return;
+    }
+
+    if (!me) {
+      console.error('❌ [Chatbot] No user object');
+      alert("Please log in to purchase assets");
+      return;
+    }
+
+    if (!me.id) {
+      console.error('❌ [Chatbot] User has no ID');
+      alert("Please log in to purchase assets");
+      return;
+    }
+
+    if (!me.username) {
+      console.error('❌ [Chatbot] User has no username');
+      alert("Please complete your profile to purchase assets");
+      return;
+    }
 
     setIsProcessing(true)
     try {
@@ -629,11 +702,11 @@ const ShingruChatbot: React.FC = () => {
         pricePerShare: selectedAsset.pricePerShare,
         tempTransactionHash: reserveData.data.transactionHash,
       }))
-      
+
       // Create a payment link for this RWA purchase
       // The link tag will be the assetId, which allows the payment processor to identify RWA purchases
       const paymentLink = `/${me.username}/${selectedAsset.assetId}`
-      
+
       // Close modal and navigate to payment page
       // The payment page will handle creating the link if it doesn't exist
       setIsBuyModalOpen(false)
@@ -684,9 +757,8 @@ const ShingruChatbot: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`rounded-2xl shadow-2xl flex flex-col w-[350px] sm:w-[400px] h-[500px] sm:h-[550px] ${
-              isExpanded ? "md:w-[600px] md:h-[700px]" : ""
-            } bg-white/95 backdrop-blur-xl border border-gray-200/50`}
+            className={`rounded-2xl shadow-2xl flex flex-col w-[350px] sm:w-[400px] h-[500px] sm:h-[550px] ${isExpanded ? "md:w-[600px] md:h-[700px]" : ""
+              } bg-white/95 backdrop-blur-xl border border-gray-200/50`}
             style={{ isolation: "isolate" }}
             onWheel={(e) => e.stopPropagation()}
           >
@@ -703,7 +775,7 @@ const ShingruChatbot: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">
-                    Vault Assistant
+                    Agentic Trading
                   </h3>
                   <p className="text-xs text-gray-500">
                     Privacy-first payments
@@ -799,25 +871,23 @@ const ShingruChatbot: React.FC = () => {
                       variants={messageVariants}
                       initial="hidden"
                       animate="visible"
-                      className={`flex ${
-                        message.sender === "user"
+                      className={`flex ${message.sender === "user"
                           ? "justify-end"
                           : "justify-start"
-                      }`}
+                        }`}
                     >
                       <motion.div
                         whileHover={message.sender === "ai" && message.assets ? undefined : { scale: 1.01 }}
-                        className={`${
-                          message.sender === "user"
+                        className={`${message.sender === "user"
                             ? "max-w-[85%] p-3 rounded-2xl bg-[#FF8200] text-white rounded-br-md shadow-md"
                             : message.assets && message.assets.length > 0
-                            ? "w-full max-w-full"
-                            : "max-w-[85%] p-3 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm"
-                        }`}
+                              ? "w-full max-w-full"
+                              : "max-w-[85%] p-3 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm"
+                          }`}
                       >
                         {index === messages.length - 1 &&
-                        message.sender === "ai" &&
-                        isStreaming ? (
+                          message.sender === "ai" &&
+                          isStreaming ? (
                           renderStreamingText(streamingContent)
                         ) : message.assets && message.assets.length > 0 ? (
                           // Render both brief text and asset cards (1-2 cards) when assets are present
@@ -835,7 +905,7 @@ const ShingruChatbot: React.FC = () => {
                                   console.error('❌ [Chatbot] Invalid asset data:', asset);
                                   return null;
                                 }
-                                
+
                                 console.log('🎴 [Chatbot] Rendering asset card:', {
                                   assetId: asset.assetId,
                                   name: asset.name,
@@ -843,7 +913,7 @@ const ShingruChatbot: React.FC = () => {
                                   hasPrice: asset.pricePerShare !== undefined,
                                   hasShares: asset.availableShares !== undefined && asset.totalShares !== undefined
                                 });
-                                
+
                                 return (
                                   <div key={asset.assetId || assetIndex} className="p-2">
                                     <AssetCard
@@ -934,15 +1004,16 @@ const ShingruChatbot: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="flex flex-wrap gap-2 mt-3"
+                className="flex flex-row gap-2 mt-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+                style={{ scrollbarWidth: 'thin' }}
               >
                 {getSampleQuestions().map((question, index) => (
                   <motion.button
                     key={index}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => handleQuestionClick(question)}
-                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full transition-colors truncate max-w-[180px]"
+                    className="flex-shrink-0 text-xs bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 text-gray-700 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md border border-gray-200/50 whitespace-nowrap font-medium"
                     disabled={isLoading}
                   >
                     {question}

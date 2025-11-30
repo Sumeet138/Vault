@@ -324,8 +324,17 @@ function TokenInput({
         const response = await userService.getBalance(address, chainId);
 
         if (response.error) {
-          setError(response.error);
-          setTokens([]);
+          // Don't show "Backend not configured" error - it's expected in backend-less mode
+          // Instead, silently fall back to predefined mode behavior
+          if (response.error.includes("Backend not configured") || response.error.includes("backend-less mode")) {
+            // In backend-less mode, don't show error - just use empty tokens
+            // The parent component should handle predefined mode
+            setError(null);
+            setTokens([]);
+          } else {
+            setError(response.error);
+            setTokens([]);
+          }
         } else if (response.data) {
           const convertedTokens = convertToTokens(response.data);
           setTokens(convertedTokens);
@@ -393,6 +402,11 @@ function TokenInput({
       const chainId = getChainId(chain);
       const response = await userService.getBalance(address, chainId);
 
+      // Silently ignore backend-less mode errors in silent refresh
+      if (response.error && (response.error.includes("Backend not configured") || response.error.includes("backend-less mode"))) {
+        return; // Don't update anything, just return silently
+      }
+
       if (response.data) {
         const convertedTokens = convertToTokens(response.data);
         
@@ -437,8 +451,14 @@ function TokenInput({
       const response = await userService.getBalance(address, chainId);
 
       if (response.error) {
-        setError(response.error);
-        setTokens([]);
+        // Don't show "Backend not configured" error - it's expected in backend-less mode
+        if (response.error.includes("Backend not configured") || response.error.includes("backend-less mode")) {
+          setError(null);
+          setTokens([]);
+        } else {
+          setError(response.error);
+          setTokens([]);
+        }
       } else if (response.data) {
         const convertedTokens = convertToTokens(response.data);
         setTokens(convertedTokens);

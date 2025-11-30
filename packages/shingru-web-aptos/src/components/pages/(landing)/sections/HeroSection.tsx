@@ -56,7 +56,7 @@ export default function HeroSection() {
   const phoneControls = useAnimation()
   const isMounted = useIsMounted()
   const isMountedRef = useRef(false)
-  
+
   // Track mounted state with ref for async functions
   useEffect(() => {
     isMountedRef.current = isMounted
@@ -104,7 +104,7 @@ export default function HeroSection() {
     const measureAndAnimate = async () => {
       // Check if component is still mounted before each animation call
       if (!isMountedRef.current) return
-      
+
       const width = textElement.scrollWidth
 
       if (isInitialRun) {
@@ -271,8 +271,8 @@ export default function HeroSection() {
                   </span>
                 </motion.div>
               </div>
-              <h1 className="font-bold text-5xl md:text-7xl leading-tight md:leading-[70px] text-gray-900 mt-6">
-                <span className="inline-block overflow-hidden leading-none tracking-tight">
+              <h1 className="font-bold text-4xl md:text-6xl leading-tight md:leading-[60px] text-gray-900 mt-6">
+                <span className="inline-block overflow-hidden leading-none tracking-tight whitespace-nowrap">
                   <motion.span
                     initial={{ y: "100%", scale: 0.98 }}
                     animate={{ y: 0, scale: 1 }}
@@ -283,7 +283,7 @@ export default function HeroSection() {
                     }}
                     className="inline-block"
                   >
-                    Get
+                    Invest
                   </motion.span>{" "}
                   <motion.span
                     initial={{ y: "100%" }}
@@ -296,7 +296,33 @@ export default function HeroSection() {
                     }}
                     className="inline-block"
                   >
-                    Paid
+                    in
+                  </motion.span>{" "}
+                  <motion.span
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    transition={{
+                      type: "tween",
+                      duration: 0.65,
+                      ease: EASE_OUT_QUART,
+                      delay: 0.15,
+                    }}
+                    className="inline-block"
+                  >
+                    RWA
+                  </motion.span>{" "}
+                  <motion.span
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    transition={{
+                      type: "tween",
+                      duration: 0.65,
+                      ease: EASE_OUT_QUART,
+                      delay: 0.2,
+                    }}
+                    className="inline-block"
+                  >
+                    Fractions
                   </motion.span>
                 </span>
                 <br />
@@ -312,11 +338,11 @@ export default function HeroSection() {
                         type: "tween",
                         duration: 0.65,
                         ease: EASE_OUT_QUART,
-                        delay: 0.2,
+                        delay: 0.25,
                       }}
                       className="inline-block"
                     >
-                      Stay
+                      with
                     </motion.span>{" "}
                     <motion.span
                       initial={{ y: "100%" }}
@@ -329,7 +355,7 @@ export default function HeroSection() {
                       }}
                       className="inline-block"
                     >
-                      Private
+                      Privacy
                     </motion.span>
                   </span>
                   <motion.div
@@ -466,7 +492,7 @@ export default function HeroSection() {
                     whileTap={{ scale: 0.98 }}
                     className="cursor-pointer px-8 h-14 bg-black rounded-lg text-white transition-colors shadow-lg shadow-black/5 hover:bg-[#FF8200]"
                   >
-                    <p className="text-lg font-semibold">Get free trial</p>
+                    <p className="text-lg font-semibold">Get Started</p>
                   </motion.button>
                 </Link>
 

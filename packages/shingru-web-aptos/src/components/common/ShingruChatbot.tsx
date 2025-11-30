@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useContext } from "react"
 import { motion, AnimatePresence, Variants } from "framer-motion"
 import { aiPrompt, GROQ_CONFIG, SUPPORTED_LANGUAGES } from "@/ai/aiPrompt"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import Groq from "groq-sdk"
+import { AuthContext } from "@/providers/AuthProvider"
 import {
   ChevronDown,
   Maximize2,
@@ -215,6 +216,9 @@ const toggleButtonVariants: Variants = {
 }
 
 const ShingruChatbot: React.FC = () => {
+  // Safe auth hook that doesn't throw if AuthProvider is not available
+  const authContext = useContext(AuthContext)
+  const me = authContext?.me || null
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -284,19 +288,49 @@ const ShingruChatbot: React.FC = () => {
 
     try {
       let response: string
-      if (USE_GROQ && groqClient) {
-        const streamPlaceholder = { text: "", sender: "ai" as const }
-        setMessages((prev) => [...prev, streamPlaceholder])
-        response = await handleStreamWithGroq(userMessage.text)
-        setMessages((prev) => {
-          const newMessages = [...prev]
-          newMessages[newMessages.length - 1].text = response
-          return newMessages
+      
+      // Try using the API route first (with MongoDB integration)
+      try {
+        const apiResponse = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: userMessage.text,
+            userId: me?.id || null,
+            username: me?.username || null,
+          }),
         })
-      } else {
-        // Fallback response when API is not configured
-        response =
-          "I'm sorry, but the AI service is not configured. Please set up your GROQ API key in the environment variables (NEXT_PUBLIC_GROQ_API_KEY) to enable chat functionality."
+
+        if (apiResponse.ok) {
+          const data = await apiResponse.json()
+          response = data.response || 'I apologize, but I could not generate a response. Please try again.'
+        } else {
+          // If API route fails, fall back to direct Groq
+          throw new Error('API route failed, falling back to direct Groq')
+        }
+      } catch (apiError) {
+        // Fallback to direct Groq client if API route is not available
+        console.log('API route not available, using direct Groq client:', apiError)
+        if (USE_GROQ && groqClient) {
+          const streamPlaceholder = { text: "", sender: "ai" as const }
+          setMessages((prev) => [...prev, streamPlaceholder])
+          response = await handleStreamWithGroq(userMessage.text)
+          setMessages((prev) => {
+            const newMessages = [...prev]
+            newMessages[newMessages.length - 1].text = response
+            return newMessages
+          })
+        } else {
+          // Fallback response when API is not configured
+          response =
+            "I'm sorry, but the AI service is not configured. Please set up your GROQ API key in the environment variables (GROQ_API_KEY or NEXT_PUBLIC_GROQ_API_KEY) to enable chat functionality."
+        }
+      }
+
+      // Add AI response to messages
+      if (!isStreaming) {
         const aiMessage = { text: response, sender: "ai" as const }
         setMessages((prev) => [...prev, aiMessage])
       }

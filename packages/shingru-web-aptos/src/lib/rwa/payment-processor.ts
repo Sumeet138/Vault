@@ -3,7 +3,15 @@
  * Handles processing RWA purchases when payments are detected
  */
 
-import { getAssetById, updateAssetShares, addHolding, createTransaction } from '@/lib/mongodb/rwa';
+import { 
+  getAssetById, 
+  updateAssetShares, 
+  addHolding, 
+  createTransaction,
+  getTransactionsCollection,
+  getHoldingsCollection,
+  updateTransactionStatus,
+} from '@/lib/mongodb/rwa';
 import type { Asset } from '@/lib/mongodb/rwa-types';
 
 export interface ProcessRWAPaymentParams {
@@ -17,6 +25,9 @@ export interface ProcessRWAPaymentParams {
 
 /**
  * Process an RWA purchase after payment is confirmed
+ * This function now handles both:
+ * 1. New purchases (when payment completes before reservation)
+ * 2. Updating existing reserved purchases (when payment completes after reservation)
  */
 export async function processRWAPurchase(
   params: ProcessRWAPaymentParams
@@ -40,6 +51,36 @@ export async function processRWAPurchase(
       // Still process, but log the difference
     }
 
+    // Check if there's a pending transaction for this user and asset
+    // This means the purchase was already reserved when the button was clicked
+    const transactionsCollection = await getTransactionsCollection();
+    const pendingTransaction = await transactionsCollection.findOne({
+      buyerUserId: userId,
+      assetId,
+      quantity,
+      status: 'PENDING',
+    });
+
+    if (pendingTransaction) {
+      // Purchase was already reserved, just update the transaction status and hash
+      // Update transaction status to COMPLETED and set the real transaction hash
+      await transactionsCollection.updateOne(
+        { _id: pendingTransaction._id },
+        { $set: { transactionHash, status: 'COMPLETED' } }
+      );
+      
+      // Update the holding's transaction hash
+      const holdingsCollection = await getHoldingsCollection();
+      await holdingsCollection.updateOne(
+        { userId, assetId, transactionHash: pendingTransaction.transactionHash },
+        { $set: { transactionHash } }
+      );
+
+      console.log(`✅ RWA purchase completed (was reserved): ${quantity} shares of ${assetId} for user ${userId}`);
+      return { success: true };
+    }
+
+    // New purchase flow (payment completed before reservation)
     // Check availability
     if (asset.availableShares < quantity) {
       return { 

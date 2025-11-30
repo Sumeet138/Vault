@@ -63,6 +63,9 @@ async function getTransactionsCollection(): Promise<Collection<Transaction>> {
   return database.collection<Transaction>('transactions');
 }
 
+// Export collection getters for use in payment processor
+export { getTransactionsCollection, getHoldingsCollection };
+
 // Asset functions
 export async function getAssetsFromDB(): Promise<Asset[]> {
   try {
@@ -205,6 +208,23 @@ export async function updateTransactionStatus(
     return result.modifiedCount > 0;
   } catch (error) {
     console.error('Error updating transaction status:', error);
+    return false;
+  }
+}
+
+export async function updateTransactionHash(
+  oldTransactionHash: string,
+  newTransactionHash: string
+): Promise<boolean> {
+  try {
+    const collection = await getTransactionsCollection();
+    const result = await collection.updateOne(
+      { transactionHash: oldTransactionHash },
+      { $set: { transactionHash: newTransactionHash } }
+    );
+    return result.modifiedCount > 0;
+  } catch (error) {
+    console.error('Error updating transaction hash:', error);
     return false;
   }
 }

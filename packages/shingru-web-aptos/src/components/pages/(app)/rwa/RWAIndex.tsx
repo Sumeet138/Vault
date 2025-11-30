@@ -115,17 +115,42 @@ export default function RWAIndex() {
 
     setIsProcessing(true);
     try {
-      // Create a payment link for this RWA purchase
-      // The link tag will be the assetId, which allows the payment processor to identify RWA purchases
-      const paymentLink = `/${me.username}/${selectedAsset.assetId}`;
-      
+      // First, reserve the purchase in MongoDB (deduct shares and add to portfolio)
+      const reserveResponse = await fetch('/api/rwa/reserve-purchase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          assetId: selectedAsset.assetId,
+          userId: me.id,
+          quantity,
+        }),
+      });
+
+      const reserveData = await reserveResponse.json();
+
+      if (!reserveData.success) {
+        alert(reserveData.error || 'Failed to reserve purchase. Please try again.');
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log('✅ Purchase reserved:', reserveData.data);
+
       // Store purchase intent in sessionStorage for the payment page
+      // Include the temp transaction hash so payment processor can update it
       sessionStorage.setItem('rwa-purchase-intent', JSON.stringify({
         assetId: selectedAsset.assetId,
         quantity,
         totalCost,
         pricePerShare: selectedAsset.pricePerShare,
+        tempTransactionHash: reserveData.data.transactionHash,
       }));
+      
+      // Create a payment link for this RWA purchase
+      // The link tag will be the assetId, which allows the payment processor to identify RWA purchases
+      const paymentLink = `/${me.username}/${selectedAsset.assetId}`;
       
       // Navigate to payment page
       // The payment page will handle creating the link if it doesn't exist
@@ -133,7 +158,6 @@ export default function RWAIndex() {
     } catch (error) {
       console.error('Error preparing purchase:', error);
       alert('Failed to prepare purchase. Please try again.');
-    } finally {
       setIsProcessing(false);
     }
   };

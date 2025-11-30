@@ -42,13 +42,29 @@ export default function AptosPayButton({
   // Memoize the disabled state to prevent infinite re-renders
   const isDisabled = useMemo(() => {
     const wallet = getAptosWallet();
-    return (
+    const parsedAmount = parseFloat(amount?.replace(/,/g, '') || '0');
+    const disabled = (
       isPaying ||
       !selectedToken ||
       !amount ||
-      parseFloat(amount) <= 0 ||
+      parsedAmount <= 0 ||
       !wallet
     );
+    
+    // Debug logging
+    if (disabled && process.env.NODE_ENV === 'development') {
+      console.log('🔴 Payment button disabled:', {
+        isPaying,
+        hasSelectedToken: !!selectedToken,
+        selectedToken,
+        hasAmount: !!amount,
+        amount,
+        parsedAmount,
+        hasWallet: !!wallet,
+      });
+    }
+    
+    return disabled;
   }, [isPaying, selectedToken, amount]);
 
   async function handlePay() {

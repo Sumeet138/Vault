@@ -6,6 +6,7 @@ import {
   LinkIcon,
   QueueListIcon,
   Squares2X2Icon,
+  BuildingOfficeIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +29,11 @@ const MENUS = [
     path: "/app/links",
     title: "Links",
     icon: LinkIcon,
+  },
+  {
+    path: "/app/rwa",
+    title: "RWA",
+    icon: BuildingOfficeIcon,
   },
   {
     path: "/app/activities",

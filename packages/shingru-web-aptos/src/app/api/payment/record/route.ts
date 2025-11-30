@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { savePaymentAndCreditBalance } from '@/lib/supabase/payment-handler';
 import { trackPaymentCompletion } from '@/lib/photon/rewards';
+import { processRWAPurchase, isRWAAsset } from '@/lib/rwa/payment-processor';
+import { getAssetById } from '@/lib/mongodb/rwa';
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,6 +92,44 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         // Log error but don't fail the payment recording
         console.error('Failed to track payment completion with Photon:', error);
+      }
+    }
+
+    // Check if this is an RWA purchase and process it
+    // The label field is used to store the assetId for RWA purchases
+    if (label) {
+      try {
+        const isRWA = await isRWAAsset(label);
+        if (isRWA) {
+          const asset = await getAssetById(label);
+          if (asset) {
+            // Calculate quantity from amount
+            const amountInAPT = Number(amountBigInt) / Math.pow(10, decimals || 8);
+            const quantity = Math.floor(amountInAPT / asset.pricePerShare);
+            
+            if (quantity > 0) {
+              const rwaResult = await processRWAPurchase({
+                userId,
+                assetId: label,
+                quantity,
+                transactionHash: txHash,
+                amount: amountBigInt,
+                pricePerShare: asset.pricePerShare,
+              });
+              
+              if (rwaResult.success) {
+                console.log(`✅ RWA purchase processed: ${quantity} shares of ${label} for user ${userId}`);
+              } else {
+                console.error(`❌ RWA purchase processing failed: ${rwaResult.error}`);
+                // Don't fail the payment recording if RWA processing fails
+                // The payment was successful, RWA processing can be retried
+              }
+            }
+          }
+        }
+      } catch (error) {
+        // Log error but don't fail the payment recording
+        console.error('Error processing RWA purchase:', error);
       }
     }
 

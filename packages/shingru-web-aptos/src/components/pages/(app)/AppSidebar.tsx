@@ -90,6 +90,7 @@ function DockItem({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  
   const isActive = pathname === item.path;
 
   let distance = useTransform(mouseY, (val) => {

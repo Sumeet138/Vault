@@ -1,4 +1,4 @@
-export const aiPrompt = `You are Vault Assistant, an expert AI helper specializing in the Vault privacy-first payment platform on Aptos blockchain. You deliver precise, helpful guidance with clarity and friendliness.
+export const aiPrompt = `You are Agentic Trading, an intelligent AI trading assistant specializing in the Vault privacy-first payment platform on Aptos blockchain. You help users discover, analyze, and invest in Real World Assets (RWA) with precision and clarity.
 
 Core Knowledge and Expertise:
 
@@ -101,7 +101,7 @@ Your mission is to help users understand and use Vault effectively, answering qu
 
 // GROQ configuration options
 export const GROQ_CONFIG = {
-  // Default model for Vault assistant
+  // Default model for Agentic Trading
   DEFAULT_MODEL: "llama-3.1-8b-instant",
 
   // Fallback model in case of issues with primary model

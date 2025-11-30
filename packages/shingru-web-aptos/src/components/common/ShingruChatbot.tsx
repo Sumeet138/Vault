@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useContext } from "react"
 import { motion, AnimatePresence, Variants } from "framer-motion"
 import { aiPrompt, GROQ_CONFIG, SUPPORTED_LANGUAGES } from "@/ai/aiPrompt"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import Groq from "groq-sdk"
+import { useAuth } from "@/providers/AuthProvider"
 import {
   ChevronDown,
   Maximize2,
@@ -15,6 +16,12 @@ import {
   Send,
   MessageCircle,
 } from "lucide-react"
+import AssetCard from "@/components/pages/(app)/rwa/AssetCard"
+import CuteModal from "@/components/common/CuteModal"
+import CuteButton from "@/components/common/CuteButton"
+import { Asset } from "@/lib/mongodb/rwa-types"
+import { formatUiNumber } from "@/utils/formatting"
+import { useRouter } from "next/navigation"
 
 const USE_GROQ = process.env.NEXT_PUBLIC_GROQ_API_KEY ? true : false
 
@@ -37,9 +44,24 @@ interface GroqMessage {
   content: string
 }
 
+interface UIComponent {
+  type: 'asset_cards' | 'action_button' | 'info_card' | string
+  assets?: any[]
+  label?: string
+  action?: string
+  url?: string
+  title?: string
+  content?: string
+  [key: string]: any
+}
+
 interface Message {
   text: string
   sender: "user" | "ai"
+  assets?: any[] // Legacy: Array of asset data if mentioned in AI response
+  ui?: {
+    components?: UIComponent[] // Generative UI components
+  }
 }
 
 const MarkdownRenderer = ({ content }: { content: string }) => {
@@ -126,11 +148,10 @@ const LanguageSelector = ({
                 onSelectLanguage(language.code)
                 setIsOpen(false)
               }}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
-                selectedLanguage === language.code
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${selectedLanguage === language.code
                   ? "bg-orange-50 font-medium"
                   : ""
-              }`}
+                }`}
             >
               <span className="block text-gray-800">{language.nativeName}</span>
               <span className="block text-xs text-gray-500">
@@ -215,6 +236,32 @@ const toggleButtonVariants: Variants = {
 }
 
 const ShingruChatbot: React.FC = () => {
+  // Use useAuth hook (same as RWAIndex) - will throw if not in AuthProvider, which is fine
+  let me = null;
+  let authError = false;
+  try {
+    const auth = useAuth();
+    me = auth.me;
+  } catch (error) {
+    // AuthProvider not available - this is fine for public pages
+    // Only log in development to avoid console noise
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('AuthProvider not available in chatbot context (this is normal for public pages)');
+    }
+    authError = true;
+  }
+
+  // HARDCODED FOR TESTING - remove in production
+  if (!me || !me.username) {
+    me = {
+      id: 'test-user-id',
+      username: 'ayux',
+      profileImage: null,
+    } as any;
+    console.log('🧪 [TESTING] Using hardcoded user: ayux');
+  }
+
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -223,6 +270,15 @@ const ShingruChatbot: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState("en")
   const [streamingContent, setStreamingContent] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
+
+  // RWA purchase modal state (exact same as RWA route)
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false)
+  const [quantity, setQuantity] = useState(1)
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  // Loading state for asset cards
+  const [loadingAssets, setLoadingAssets] = useState<string[]>([])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -284,20 +340,169 @@ const ShingruChatbot: React.FC = () => {
 
     try {
       let response: string
-      if (USE_GROQ && groqClient) {
-        const streamPlaceholder = { text: "", sender: "ai" as const }
-        setMessages((prev) => [...prev, streamPlaceholder])
-        response = await handleStreamWithGroq(userMessage.text)
-        setMessages((prev) => {
-          const newMessages = [...prev]
-          newMessages[newMessages.length - 1].text = response
-          return newMessages
+
+      // Try using the API route first (with MongoDB integration)
+      try {
+        // Build conversation history (last 10 messages for context)
+        const conversationHistory = messages
+          .slice(-10) // Last 10 messages for context
+          .map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.text
+          }));
+
+        console.log('💬 [Chatbot] Sending conversation history:', conversationHistory.length, 'messages');
+
+        const apiResponse = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: userMessage.text,
+            userId: me?.id || null,
+            username: me?.username || null,
+            conversationHistory: conversationHistory, // Send conversation history for context
+          }),
         })
-      } else {
-        // Fallback response when API is not configured
-        response =
-          "I'm sorry, but the AI service is not configured. Please set up your GROQ API key in the environment variables (NEXT_PUBLIC_GROQ_API_KEY) to enable chat functionality."
-        const aiMessage = { text: response, sender: "ai" as const }
+
+        if (apiResponse.ok) {
+          const data = await apiResponse.json()
+          response = data.response || 'I apologize, but I could not generate a response. Please try again.'
+
+          // Handle assets array or legacy asset singular
+          let assetsArray: any[] = [];
+          if (data.assets && Array.isArray(data.assets) && data.assets.length > 0) {
+            assetsArray = data.assets;
+          } else if (data.asset) {
+            // Backward compatibility: convert singular asset to array
+            assetsArray = [data.asset];
+          }
+
+          // Log for debugging with full asset details
+          if (assetsArray.length > 0) {
+            console.log('✅ [Chatbot] Received assets data:', {
+              count: assetsArray.length,
+              assets: assetsArray.map((a: any) => ({
+                assetId: a.assetId,
+                name: a.name,
+                location: a.location,
+                description: a.description ? a.description.substring(0, 50) + '...' : 'NO DESCRIPTION',
+                pricePerShare: a.pricePerShare,
+                availableShares: a.availableShares,
+                totalShares: a.totalShares,
+                status: a.status,
+                hasAllFields: !!(a.assetId && a.name && a.location && a.description && a.pricePerShare !== undefined && a.availableShares !== undefined && a.totalShares !== undefined)
+              })),
+            });
+          } else {
+            console.log('⚠️ [Chatbot] No assets in response:', {
+              hasAssets: !!data.assets,
+              assetsLength: data.assets?.length || 0,
+              hasAsset: !!data.asset,
+              metadata: data.metadata
+            });
+          }
+
+          // Add AI response with asset data if present
+          const aiMessage: Message = {
+            text: response,
+            sender: "ai",
+            assets: assetsArray.length > 0 ? assetsArray : undefined,
+          }
+
+          console.log('💬 [Chatbot] Adding message to chat:', {
+            hasText: !!aiMessage.text,
+            textLength: aiMessage.text?.length || 0,
+            hasAssets: !!aiMessage.assets,
+            assetsCount: aiMessage.assets?.length || 0
+          });
+
+          setMessages((prev) => [...prev, aiMessage])
+          return // Exit early since we've already added the message
+        } else {
+          // API route returned an error - parse the error response
+          let errorMessage = 'API route failed';
+          let errorDetails: any = null;
+
+          try {
+            const errorData = await apiResponse.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+            errorDetails = errorData;
+            console.error('❌ API route error response:', {
+              status: apiResponse.status,
+              statusText: apiResponse.statusText,
+              error: errorMessage,
+              details: errorData,
+            });
+          } catch (parseError) {
+            // If JSON parsing fails, try to get text response
+            try {
+              const errorText = await apiResponse.text();
+              console.error('❌ API route error (non-JSON):', {
+                status: apiResponse.status,
+                statusText: apiResponse.statusText,
+                body: errorText,
+              });
+              errorMessage = `API route failed with status ${apiResponse.status}: ${errorText}`;
+            } catch (textError) {
+              console.error('❌ API route error (unable to read response):', {
+                status: apiResponse.status,
+                statusText: apiResponse.statusText,
+              });
+              errorMessage = `API route failed with status ${apiResponse.status}`;
+            }
+          }
+
+          // Throw error with details for better debugging
+          throw new Error(`API route failed: ${errorMessage}`)
+        }
+      } catch (apiError: any) {
+        // Log the full error for debugging
+        console.error('❌ API route error caught:', {
+          error: apiError,
+          message: apiError?.message,
+          stack: apiError?.stack,
+        });
+
+        // Check if it's a network error or API error
+        const isNetworkError = apiError?.message?.includes('fetch') ||
+          apiError?.message?.includes('network') ||
+          apiError?.name === 'TypeError';
+
+        // Fallback to direct Groq client if API route is not available
+        if (USE_GROQ && groqClient && !isNetworkError) {
+          console.log('⚠️ API route unavailable, falling back to direct Groq client');
+          try {
+            const streamPlaceholder = { text: "", sender: "ai" as const }
+            setMessages((prev) => [...prev, streamPlaceholder])
+            response = await handleStreamWithGroq(userMessage.text)
+            setMessages((prev) => {
+              const newMessages = [...prev]
+              newMessages[newMessages.length - 1].text = response
+              return newMessages
+            })
+            return // Exit early after handling with Groq
+          } catch (groqError) {
+            console.error('❌ Direct Groq client also failed:', groqError);
+            // Fall through to error message
+          }
+        }
+
+        // Show user-friendly error message
+        if (apiError?.message?.includes('AI service not configured')) {
+          response = "I'm sorry, but the AI service is not configured. Please set up your GROQ API key in the environment variables (GROQ_API_KEY or NEXT_PUBLIC_GROQ_API_KEY) to enable chat functionality."
+        } else if (isNetworkError) {
+          response = "I'm having trouble connecting to the AI service. Please check your internet connection and try again."
+        } else {
+          response = `I encountered an error: ${apiError?.message || 'Unknown error'}. Please try again or contact support if the issue persists.`
+        }
+      }
+
+      // Add AI response to messages (only if not already added from API route)
+      // Note: API route already adds the message and returns early, so this only runs for fallback cases
+      if (!isStreaming) {
+        const aiMessage: Message = { text: response, sender: "ai" as const }
         setMessages((prev) => [...prev, aiMessage])
       }
     } catch (error) {
@@ -368,19 +573,22 @@ const ShingruChatbot: React.FC = () => {
   const getSampleQuestions = (): string[] => {
     const questions: Record<string, string[]> = {
       en: [
-        "What is Vault?",
-        "How do stealth addresses work?",
-        "How do I receive payments?",
+        "Best properties to invest in Pune",
+        "Show me RWA assets in Mumbai",
+        "What properties are available in Bangalore?",
+        "Which assets have the best returns?",
       ],
       hi: [
-        "Vault क्या है?",
-        "स्टेल्थ एड्रेस कैसे काम करते हैं?",
-        "मैं भुगतान कैसे प्राप्त करूं?",
+        "पुणे में निवेश के लिए सर्वश्रेष्ठ properties",
+        "मुंबई में RWA assets दिखाएं",
+        "बैंगलोर में कौन सी properties उपलब्ध हैं?",
+        "किन assets में सबसे अच्छा रिटर्न है?",
       ],
       bn: [
-        "Vault কি?",
-        "স্টেলথ অ্যাড্রেস কিভাবে কাজ করে?",
-        "আমি কিভাবে পেমেন্ট পাব?",
+        "পুনেতে বিনিয়োগের জন্য সেরা properties",
+        "মুম্বাইতে RWA assets দেখান",
+        "বেঙ্গালুরুতে কোন properties উপলব্ধ?",
+        "কোন assets এর সবচেয়ে ভাল রিটার্ন আছে?",
       ],
     }
     return questions[selectedLanguage] || questions["en"]
@@ -392,6 +600,127 @@ const ShingruChatbot: React.FC = () => {
   }
 
   const handleClearChat = () => setMessages([])
+
+  // RWA purchase handlers (reused from RWAIndex)
+  const handleBuyClick = (asset: Asset) => {
+    console.log('🛒 [Chatbot] handleBuyClick called:', {
+      hasMe: !!me,
+      meId: me?.id,
+      meUsername: me?.username,
+      assetId: asset.assetId,
+      assetName: asset.name
+    });
+
+    if (!me) {
+      console.error('❌ [Chatbot] No user object found');
+      alert("Please log in to purchase assets")
+      return
+    }
+
+    if (!me.username) {
+      console.error('❌ [Chatbot] User has no username');
+      alert("Please complete your profile (username required) to purchase assets")
+      return
+    }
+
+    if (!me.id) {
+      console.error('❌ [Chatbot] User has no ID');
+      alert("Please log in to purchase assets")
+      return
+    }
+
+    console.log('✅ [Chatbot] Opening purchase modal for asset:', asset.name);
+    setSelectedAsset(asset)
+    setQuantity(1)
+    setIsBuyModalOpen(true)
+  }
+
+  const handlePurchase = async () => {
+    console.log('💳 [Chatbot] handlePurchase called:', {
+      hasSelectedAsset: !!selectedAsset,
+      hasMe: !!me,
+      meId: me?.id,
+      meUsername: me?.username,
+      quantity
+    });
+
+    if (!selectedAsset) {
+      console.error('❌ [Chatbot] No asset selected');
+      return;
+    }
+
+    if (!me) {
+      console.error('❌ [Chatbot] No user object');
+      alert("Please log in to purchase assets");
+      return;
+    }
+
+    if (!me.id) {
+      console.error('❌ [Chatbot] User has no ID');
+      alert("Please log in to purchase assets");
+      return;
+    }
+
+    if (!me.username) {
+      console.error('❌ [Chatbot] User has no username');
+      alert("Please complete your profile to purchase assets");
+      return;
+    }
+
+    setIsProcessing(true)
+    try {
+      // Reserve the purchase in MongoDB (exact same as RWA route)
+      // Exact same flow as RWAIndex
+      const reserveResponse = await fetch('/api/rwa/reserve-purchase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          assetId: selectedAsset.assetId,
+          userId: me.id,
+          quantity,
+        }),
+      })
+
+      const reserveData = await reserveResponse.json()
+
+      if (!reserveData.success) {
+        alert(reserveData.error || 'Failed to reserve purchase. Please try again.')
+        setIsProcessing(false)
+        return
+      }
+
+      console.log('✅ Purchase reserved:', reserveData.data)
+
+      // Store purchase intent in sessionStorage for the payment page
+      // Include the temp transaction hash so payment processor can update it
+      sessionStorage.setItem('rwa-purchase-intent', JSON.stringify({
+        assetId: selectedAsset.assetId,
+        quantity,
+        totalCost: selectedAsset.pricePerShare * quantity,
+        pricePerShare: selectedAsset.pricePerShare,
+        tempTransactionHash: reserveData.data.transactionHash,
+      }))
+
+      // Create a payment link for this RWA purchase
+      // The link tag will be the assetId, which allows the payment processor to identify RWA purchases
+      const paymentLink = `/${me.username}/${selectedAsset.assetId}`
+
+      // Close modal and navigate to payment page
+      // The payment page will handle creating the link if it doesn't exist
+      setIsBuyModalOpen(false)
+      router.push(paymentLink)
+    } catch (error) {
+      console.error('Error preparing purchase:', error)
+      alert('Failed to prepare purchase. Please try again.')
+      setIsProcessing(false)
+    }
+  }
+
+  const totalCost = selectedAsset
+    ? selectedAsset.pricePerShare * quantity
+    : 0
 
   const getPlaceholderText = (): string => {
     const placeholders: Record<string, string> = {
@@ -428,9 +757,8 @@ const ShingruChatbot: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`rounded-2xl shadow-2xl flex flex-col w-[350px] sm:w-[400px] h-[500px] sm:h-[550px] ${
-              isExpanded ? "md:w-[600px] md:h-[700px]" : ""
-            } bg-white/95 backdrop-blur-xl border border-gray-200/50`}
+            className={`rounded-2xl shadow-2xl flex flex-col w-[350px] sm:w-[400px] h-[500px] sm:h-[550px] ${isExpanded ? "md:w-[600px] md:h-[700px]" : ""
+              } bg-white/95 backdrop-blur-xl border border-gray-200/50`}
             style={{ isolation: "isolate" }}
             onWheel={(e) => e.stopPropagation()}
           >
@@ -447,7 +775,7 @@ const ShingruChatbot: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">
-                    Vault Assistant
+                    Agentic Trading
                   </h3>
                   <p className="text-xs text-gray-500">
                     Privacy-first payments
@@ -530,42 +858,80 @@ const ShingruChatbot: React.FC = () => {
                     Welcome to Vault!
                   </h4>
                   <p className="text-sm text-gray-500 text-center px-4">
-                    Ask me anything about privacy-first payments on Aptos.
+                    Ask me about privacy-first payments, RWA investments, or your portfolio.
                   </p>
                 </motion.div>
               )}
 
               <div className="space-y-4">
                 {messages.map((message, index) => (
-                  <motion.div
-                    key={index}
-                    custom={message}
-                    variants={messageVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className={`flex ${
-                      message.sender === "user"
-                        ? "justify-end"
-                        : "justify-start"
-                    }`}
-                  >
+                  <React.Fragment key={index}>
                     <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      className={`max-w-[85%] p-3 rounded-2xl ${
-                        message.sender === "user"
-                          ? "bg-[#FF8200] text-white rounded-br-md shadow-md"
-                          : "bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm"
-                      }`}
+                      custom={message}
+                      variants={messageVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className={`flex ${message.sender === "user"
+                          ? "justify-end"
+                          : "justify-start"
+                        }`}
                     >
-                      {index === messages.length - 1 &&
-                      message.sender === "ai" &&
-                      isStreaming ? (
-                        renderStreamingText(streamingContent)
-                      ) : (
-                        <MarkdownRenderer content={message.text} />
-                      )}
+                      <motion.div
+                        whileHover={message.sender === "ai" && message.assets ? undefined : { scale: 1.01 }}
+                        className={`${message.sender === "user"
+                            ? "max-w-[85%] p-3 rounded-2xl bg-[#FF8200] text-white rounded-br-md shadow-md"
+                            : message.assets && message.assets.length > 0
+                              ? "w-full max-w-full"
+                              : "max-w-[85%] p-3 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm"
+                          }`}
+                      >
+                        {index === messages.length - 1 &&
+                          message.sender === "ai" &&
+                          isStreaming ? (
+                          renderStreamingText(streamingContent)
+                        ) : message.assets && message.assets.length > 0 ? (
+                          // Render both brief text and asset cards (1-2 cards) when assets are present
+                          <div className="space-y-3">
+                            {message.text && message.text.trim() && (
+                              <div className="text-sm text-gray-700 mb-2">
+                                <MarkdownRenderer content={message.text} />
+                              </div>
+                            )}
+                            {/* Render assets in a grid (1-2 cards) */}
+                            <div className={`grid gap-3 ${message.assets.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                              {message.assets.map((asset: any, assetIndex: number) => {
+                                // Validate asset has required fields
+                                if (!asset || !asset.assetId || !asset.name) {
+                                  console.error('❌ [Chatbot] Invalid asset data:', asset);
+                                  return null;
+                                }
+
+                                console.log('🎴 [Chatbot] Rendering asset card:', {
+                                  assetId: asset.assetId,
+                                  name: asset.name,
+                                  hasDescription: !!asset.description,
+                                  hasPrice: asset.pricePerShare !== undefined,
+                                  hasShares: asset.availableShares !== undefined && asset.totalShares !== undefined
+                                });
+
+                                return (
+                                  <div key={asset.assetId || assetIndex} className="p-2">
+                                    <AssetCard
+                                      asset={asset as Asset}
+                                      onBuyClick={handleBuyClick}
+                                      isLoading={isProcessing}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <MarkdownRenderer content={message.text} />
+                        )}
+                      </motion.div>
                     </motion.div>
-                  </motion.div>
+                  </React.Fragment>
                 ))}
                 <AnimatePresence>
                   {isLoading && !isStreaming && (
@@ -638,15 +1004,16 @@ const ShingruChatbot: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="flex flex-wrap gap-2 mt-3"
+                className="flex flex-row gap-2 mt-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+                style={{ scrollbarWidth: 'thin' }}
               >
                 {getSampleQuestions().map((question, index) => (
                   <motion.button
                     key={index}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => handleQuestionClick(question)}
-                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full transition-colors truncate max-w-[180px]"
+                    className="flex-shrink-0 text-xs bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 text-gray-700 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md border border-gray-200/50 whitespace-nowrap font-medium"
                     disabled={isLoading}
                   >
                     {question}
@@ -667,6 +1034,115 @@ const ShingruChatbot: React.FC = () => {
           </motion.button>
         )}
       </AnimatePresence>
+
+      {/* Buy Modal */}
+      <CuteModal
+        isOpen={isBuyModalOpen}
+        onClose={() => {
+          setIsBuyModalOpen(false)
+          setSelectedAsset(null)
+        }}
+        title="Purchase Shares"
+        size="md"
+      >
+        {selectedAsset && (
+          <div className="space-y-6">
+            {/* Asset Info */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h3 className="font-bold text-gray-900 mb-1">
+                {selectedAsset.name}
+              </h3>
+              <p className="text-sm text-gray-500">{selectedAsset.location}</p>
+            </div>
+
+            {/* Quantity Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Shares
+              </label>
+              <div className="flex items-center gap-3">
+                <CuteButton
+                  variant="bordered"
+                  size="md"
+                  isDisabled={quantity <= 1}
+                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                >
+                  -
+                </CuteButton>
+                <div className="flex-1 text-center">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {quantity}
+                  </span>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {selectedAsset.availableShares} available
+                  </div>
+                </div>
+                <CuteButton
+                  variant="bordered"
+                  size="md"
+                  isDisabled={quantity >= selectedAsset.availableShares}
+                  onPress={() =>
+                    setQuantity(
+                      Math.min(selectedAsset.availableShares, quantity + 1)
+                    )
+                  }
+                >
+                  +
+                </CuteButton>
+              </div>
+            </div>
+
+            {/* Cost Breakdown */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Price per Share</span>
+                <span className="font-medium text-gray-900">
+                  {formatUiNumber(selectedAsset.pricePerShare, "", {
+                    maxDecimals: 2,
+                  })}{" "}
+                  APT
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Quantity</span>
+                <span className="font-medium text-gray-900">{quantity}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <span className="text-gray-900">Total Cost</span>
+                <span className="text-primary-600">
+                  {formatUiNumber(totalCost, "", { maxDecimals: 2 })} APT
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3 pt-2">
+              <CuteButton
+                color="primary"
+                variant="solid"
+                size="lg"
+                fullWidth
+                radius="lg"
+                isDisabled={quantity > selectedAsset.availableShares || isProcessing}
+                isLoading={isProcessing}
+                onPress={handlePurchase}
+                className="shadow-md hover:shadow-lg transition-shadow"
+              >
+                Purchase Shares
+              </CuteButton>
+              <CuteButton
+                variant="ghost"
+                color="gray"
+                size="lg"
+                fullWidth
+                onPress={() => setIsBuyModalOpen(false)}
+              >
+                Cancel
+              </CuteButton>
+            </div>
+          </div>
+        )}
+      </CuteModal>
     </motion.div>
   )
 }

@@ -179,13 +179,21 @@ function PayContextProvider({
             profileImageData.backgroundColor = "blue"
           }
 
+          // For RWA purchases, create linkData with tag as id if tag is provided
+          const linkData = tag ? {
+            id: tag, // Use tag (assetId) as link ID for RWA purchases
+            label: tag,
+            type: "RWA",
+          } : null;
+
           const constructedData = {
             userData: {
               username: userData.username,
               profileImageType: userData.profile_image_type || "emoji",
               profileImageData,
             },
-            linkData: null,
+            linkData: linkData, // Include tag as linkData.id for RWA purchases
+            tag: tag, // Also include tag directly for easy access
             supportedChains: ["APTOS"],
             chains: {
               APTOS: {
@@ -222,13 +230,21 @@ function PayContextProvider({
           profileImageData.backgroundColor = "blue"
         }
 
+        // For RWA purchases, create linkData with tag as id if tag is provided
+        const linkData = tag ? {
+          id: tag, // Use tag (assetId) as link ID for RWA purchases
+          label: tag,
+          type: "RWA",
+        } : null;
+
         const constructedData = {
           userData: {
             username: userData.username,
             profileImageType: userData.profile_image_type || "emoji",
             profileImageData,
           },
-          linkData: null, // No link data in backend-less mode
+          linkData: linkData, // Include tag as linkData.id for RWA purchases
+          tag: tag, // Also include tag directly for easy access
           supportedChains: ["APTOS"],
           chains: {
             APTOS: {

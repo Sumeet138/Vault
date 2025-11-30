@@ -7,6 +7,7 @@ import WalletSelectModal from "./WalletSelectModal";
 import { usePay } from "@/providers/PayProvider";
 import { EASE_OUT_QUART } from "@/config/animation";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import StaticTokenInput from "./StaticTokenInput";
 import { userService, ChainId } from "@/lib/api/user";
 import { SupportedChain } from "@/config/chains";
@@ -41,7 +42,7 @@ export default function PaymentInterface() {
   const balanceResult = useUserBalances(me?.id || null);
   const userBalances = balanceResult?.balances ?? [];
   const balancesLoading = balanceResult?.loading ?? false;
-  
+
   const {
     selectedChain,
     wallet,
@@ -128,51 +129,57 @@ export default function PaymentInterface() {
       }
       : null;
 
-  // Check for RWA purchase intent from sessionStorage
+  // ALWAYS initialize APT token and check for RWA purchase on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
+    // Step 1: Always set APT token if not set
+    if (!selectedToken) {
+      const aptToken = {
+        symbol: 'APT',
+        name: 'Aptos',
+        decimals: 8,
+        isNative: true,
+        address: '0x1::aptos_coin::AptosCoin',
+      };
+      console.log('✅ Auto-selecting APT token (backend-less mode)');
+      setSelectedToken(aptToken);
+    }
+
+    // Step 2: Check for RWA purchase intent from sessionStorage
     try {
       const rwaIntent = sessionStorage.getItem('rwa-purchase-intent');
       if (rwaIntent) {
         const purchaseInfo = JSON.parse(rwaIntent);
-        
+        console.log('📦 Found RWA purchase intent:', purchaseInfo);
+
         // Validate purchase info structure
         if (purchaseInfo && typeof purchaseInfo === 'object' && purchaseInfo.assetId && typeof purchaseInfo.totalCost === 'number') {
           setRwaPurchaseInfo(purchaseInfo);
-          
-          // Always pre-fill amount for RWA purchases (don't require tag match)
-          // The payment link will be generated with the assetId as the tag
+
+          // Always pre-fill amount for RWA purchases
           if (purchaseInfo.totalCost > 0) {
             // Format the amount properly - preserve all significant digits
-            // For small amounts like 0.0096, show full precision
             let formattedAmount: string;
-            
-            // If it's a decimal, ensure we show meaningful precision (up to 8 decimals)
+
             if (purchaseInfo.totalCost < 1) {
-              // For amounts less than 1, show up to 8 decimal places, but don't remove trailing zeros if they're significant
               formattedAmount = purchaseInfo.totalCost.toFixed(8);
-              // Only remove trailing zeros if there are more than 4 decimal places
               if (formattedAmount.split('.')[1]?.length > 4) {
                 formattedAmount = formattedAmount.replace(/\.?0+$/, '');
               }
             } else {
-              // For amounts >= 1, show up to 6 decimal places
               formattedAmount = purchaseInfo.totalCost.toFixed(6).replace(/\.?0+$/, '');
             }
-            
-            // Ensure we always have at least one digit after decimal if it's a decimal number
+
             if (purchaseInfo.totalCost % 1 !== 0 && !formattedAmount.includes('.')) {
               formattedAmount = purchaseInfo.totalCost.toFixed(8);
             }
-            
-            // Ensure the formatted amount is not empty
+
             if (!formattedAmount || formattedAmount === '0' || formattedAmount === '0.00') {
               formattedAmount = purchaseInfo.totalCost.toFixed(8);
             }
-            
-            // Always set token to APT for RWA purchases FIRST, then amount
-            // This ensures TokenInput has the token selected before amount is set
+
+            // Always set token to APT for RWA purchases
             const aptToken = {
               symbol: 'APT',
               name: 'Aptos',
@@ -180,20 +187,31 @@ export default function PaymentInterface() {
               isNative: true,
               address: '0x1::aptos_coin::AptosCoin',
             };
-            console.log('🔄 Setting RWA token:', aptToken);
+
+            console.log('🔄 Setting RWA token and amount:', {
+              token: aptToken,
+              amount: formattedAmount,
+              totalCost: purchaseInfo.totalCost
+            });
+
+            // Set both token and amount immediately
             setSelectedToken(aptToken);
-            
-            // Use setTimeout to ensure token is set before amount (prevents TokenInput from emitting null)
+            setAmount(formattedAmount);
+
+            // Double-check after a brief delay to ensure it's set
             setTimeout(() => {
-              console.log('🔄 Setting RWA amount:', { totalCost: purchaseInfo.totalCost, formattedAmount });
-              setAmount(formattedAmount);
-            }, 0);
+              if (!amount || amount === '') {
+                console.log('⚠️ Amount was empty, re-setting:', formattedAmount);
+                setAmount(formattedAmount);
+              }
+            }, 100);
           }
         } else {
-          // Invalid purchase info, clear it
           console.warn('Invalid RWA purchase intent data, clearing...');
           sessionStorage.removeItem('rwa-purchase-intent');
         }
+      } else {
+        console.log('ℹ️ No RWA purchase intent found in sessionStorage');
       }
     } catch (error) {
       console.error('Error reading RWA purchase intent:', error);
@@ -203,7 +221,7 @@ export default function PaymentInterface() {
         // Ignore storage errors
       }
     }
-  }, [addressData, setAmount, setSelectedToken]);
+  }, []); // Run only once on mount
 
   // Fetch balance for fixed token
   useEffect(() => {
@@ -280,14 +298,34 @@ export default function PaymentInterface() {
     (output: any) => {
       // This handler is for open payments only
       if (isFixedPrice) return;
-      
-      // For RWA purchases, only allow changes that match the RWA values
+
+      // For RWA purchases, always preserve the RWA amount
       if (rwaPurchaseInfo && rwaPurchaseInfo.totalCost > 0) {
+        // If output is null or amount doesn't match, restore RWA amount
+        if (!output || output.amount !== rwaPurchaseInfo.totalCost) {
+          const formattedAmount = rwaPurchaseInfo.totalCost < 1
+            ? rwaPurchaseInfo.totalCost.toFixed(8).replace(/\.?0+$/, '')
+            : rwaPurchaseInfo.totalCost.toFixed(6).replace(/\.?0+$/, '');
+
+          console.log('🔄 Restoring RWA amount:', formattedAmount);
+          setAmount(formattedAmount);
+
+          // Ensure token is set
+          if (!selectedToken) {
+            const aptToken = {
+              symbol: 'APT',
+              name: 'Aptos',
+              decimals: 8,
+              isNative: true,
+              address: '0x1::aptos_coin::AptosCoin',
+            };
+            setSelectedToken(aptToken);
+          }
+          return;
+        }
+
         // Allow the onChange if it's setting the correct RWA values
-        if (output && 
-            output.amount === rwaPurchaseInfo.totalCost && 
-            output.token?.symbol === 'APT') {
-          // This is the correct RWA values, allow it
+        if (output && output.amount === rwaPurchaseInfo.totalCost && output.token?.symbol === 'APT') {
           setAmount(output.rawAmount);
           setSelectedToken({
             symbol: output.token.symbol,
@@ -297,24 +335,23 @@ export default function PaymentInterface() {
           });
           return;
         }
-        
-        // Block any other changes (clearing or different values)
-        if (!output || output.amount !== rwaPurchaseInfo.totalCost) {
-          console.log('🚫 Blocking TokenInput onChange for RWA purchase:', { rwaPurchaseInfo, output });
-          return;
-        }
       }
 
       // Normal flow for non-RWA purchases
-      if (output) {
-        setAmount(output.rawAmount);
+      // Always set token if provided (even if amount is 0) - ensures token is selected
+      if (output && output.token) {
         setSelectedToken({
           symbol: output.token.symbol,
           decimals: output.token.decimals,
           isNative: output.token.isNative,
           address: output.token.address,
         });
-      } else {
+
+        // Only set amount if it's provided and > 0
+        if (output.rawAmount && output.amount > 0) {
+          setAmount(output.rawAmount);
+        }
+      } else if (!output) {
         // Only clear if not an RWA purchase
         if (!rwaPurchaseInfo) {
           setAmount("");
@@ -322,8 +359,32 @@ export default function PaymentInterface() {
         }
       }
     },
-    [isFixedPrice, setAmount, setSelectedToken, rwaPurchaseInfo]
+    [isFixedPrice, setAmount, setSelectedToken, rwaPurchaseInfo, selectedToken]
   );
+
+  // Safeguard: Ensure amount is set if we have RWA purchase info but amount is empty
+  useEffect(() => {
+    if (rwaPurchaseInfo && rwaPurchaseInfo.totalCost > 0 && (!amount || amount === '')) {
+      const formattedAmount = rwaPurchaseInfo.totalCost < 1
+        ? rwaPurchaseInfo.totalCost.toFixed(8).replace(/\.?0+$/, '')
+        : rwaPurchaseInfo.totalCost.toFixed(6).replace(/\.?0+$/, '');
+
+      console.log('⚠️ Amount was empty, restoring from RWA purchase info:', formattedAmount);
+      setAmount(formattedAmount);
+
+      // Also ensure token is set
+      if (!selectedToken) {
+        const aptToken = {
+          symbol: 'APT',
+          name: 'Aptos',
+          decimals: 8,
+          isNative: true,
+          address: '0x1::aptos_coin::AptosCoin',
+        };
+        setSelectedToken(aptToken);
+      }
+    }
+  }, [rwaPurchaseInfo, amount, selectedToken, setAmount, setSelectedToken]);
 
   // Check if collect info is required and validate it
   const collectInfoValidation = useMemo(() => {
@@ -576,23 +637,93 @@ export default function PaymentInterface() {
                     onChange={handleTokenInputChange}
                   />
                 ) : (
-                  // Backend-less mode: use predefined tokens
-                  <TokenInput
-                    mode="predefined"
-                    tokens={[
-                      {
-                        name: "Aptos",
-                        symbol: "APT",
-                        address: "0x1::aptos_coin::AptosCoin",
-                        decimals: 8,
-                        isNative: true,
-                      },
-                    ]}
-                    defaultToken="APT"
-                    value={amount}
-                    onChange={handleTokenInputChange}
-                    isShowMax={false}
-                  />
+                  // Backend-less mode: APT only - simple amount input (no token selector)
+                  <div className="space-y-2">
+                    {/* APT Token Display (read-only) */}
+                    <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm">
+                          APT
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">Aptos</div>
+                          <div className="text-xs text-gray-500">Native token</div>
+                        </div>
+                      </div>
+                      {aptBalance > 0 && (
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">Balance</div>
+                          <div className="text-sm font-medium text-gray-900">{formatUiNumber(aptBalance, "", { maxDecimals: 4 })} APT</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Amount Input */}
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={amount}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const value = e.target.value;
+                          // Allow only numbers and decimal point
+                          if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                            setAmount(value);
+                            // Ensure token is set (should always be APT)
+                            if (!selectedToken) {
+                              const aptToken = {
+                                symbol: 'APT',
+                                name: 'Aptos',
+                                decimals: 8,
+                                isNative: true,
+                                address: '0x1::aptos_coin::AptosCoin',
+                              };
+                              setSelectedToken(aptToken);
+                            }
+                            // Emit token change with new amount (only if amount is valid)
+                            if (selectedToken && value && parseFloat(value) > 0) {
+                              handleTokenInputChange({
+                                token: {
+                                  symbol: selectedToken.symbol,
+                                  decimals: selectedToken.decimals,
+                                  isNative: selectedToken.isNative,
+                                  address: selectedToken.address,
+                                },
+                                amount: parseFloat(value),
+                                rawAmount: value,
+                              });
+                            }
+                          }
+                        }}
+                        placeholder="0.00"
+                        className="w-full text-2xl font-semibold py-4 px-4 rounded-xl border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
+                      />
+                      {aptBalance > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const maxAmount = aptBalance.toFixed(8);
+                            setAmount(maxAmount);
+                            if (selectedToken) {
+                              handleTokenInputChange({
+                                token: {
+                                  symbol: selectedToken.symbol,
+                                  decimals: selectedToken.decimals,
+                                  isNative: selectedToken.isNative,
+                                  address: selectedToken.address,
+                                },
+                                amount: aptBalance,
+                                rawAmount: maxAmount,
+                              });
+                            }
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-primary-600 hover:text-primary-700 px-2 py-1 rounded-md hover:bg-primary-50 transition-colors"
+                        >
+                          MAX
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </motion.div>
 

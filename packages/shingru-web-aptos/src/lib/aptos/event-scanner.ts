@@ -202,8 +202,24 @@ export class AptosEventScanner {
       console.log(`📡 queryPaymentEvents: Found ${paymentEvents.length} payment events from ${transactions.length} transactions`);
 
       return paymentEvents;
-    } catch (error) {
-      console.error("Error querying payment events:", error);
+    } catch (error: any) {
+      // Better error handling - check if it's a JSON parse error
+      if (error?.message?.includes('JSON') || error?.message?.includes('Unexpected token')) {
+        console.error("❌ [EventScanner] JSON parsing error - API may have returned HTML/text instead of JSON:", {
+          message: error.message,
+          name: error.name,
+          // Don't log full error to avoid cluttering console
+        });
+      } else if (error?.message?.includes('rate limit') || error?.status === 429) {
+        console.warn("⚠️ [EventScanner] Rate limit hit - will retry later");
+      } else {
+        console.error("❌ [EventScanner] Error querying payment events:", {
+          message: error?.message,
+          name: error?.name,
+          status: error?.status,
+        });
+      }
+      // Return empty array on error - don't break the app
       return [];
     }
   }

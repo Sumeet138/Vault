@@ -215,9 +215,27 @@ function TokenInput({
   useEffect(() => {
     if (!onChange) return;
 
-    // In predefined mode, don't emit changes until a token is selected during initialization
-    if (mode === "predefined" && !selectedToken) {
-      return;
+    // In predefined mode, emit token immediately when selected (even without amount)
+    // This ensures the parent component knows which token is selected
+    if (mode === "predefined" && selectedToken) {
+      // If we have a token but no amount yet, emit token with 0 amount
+      // This allows the parent to set selectedToken even before amount is entered
+      if (!amount || amount === "0") {
+        const output = {
+          token: {
+            name: selectedToken.name,
+            symbol: selectedToken.symbol,
+            decimals: selectedToken.decimals,
+            logo: selectedToken.imageUrl,
+            address: selectedToken.mint,
+            isNative: selectedToken.isNative,
+          },
+          amount: 0,
+          rawAmount: "0",
+        };
+        onChange(output);
+        return;
+      }
     }
 
     // If we have a value prop set (controlled mode), don't emit null when token/amount is missing
@@ -227,14 +245,23 @@ function TokenInput({
       return;
     }
 
-    if (!selectedToken || !amount || amount === "0") {
-      // Use a ref or flag to prevent infinite loops when clearing
-      const shouldEmitNull = !selectedToken || !amount || amount === "0";
-      if (shouldEmitNull) {
-        // Only emit null if we're not in a controlled mode with a value
-        if (value === undefined || value === null || value === "") {
-          onChange(null);
-        }
+    if (!selectedToken) {
+      // Only emit null if we're not in a controlled mode with a value
+      if (value === undefined || value === null || value === "") {
+        onChange(null);
+      }
+      return;
+    }
+
+    // If we have a token but no amount, don't emit null in predefined mode (already handled above)
+    if (mode === "predefined" && (!amount || amount === "0")) {
+      return; // Already emitted above
+    }
+
+    if (!amount || amount === "0") {
+      // Only emit null if we're not in a controlled mode
+      if (value === undefined || value === null || value === "") {
+        onChange(null);
       }
       return;
     }
@@ -324,8 +351,17 @@ function TokenInput({
         const response = await userService.getBalance(address, chainId);
 
         if (response.error) {
-          setError(response.error);
-          setTokens([]);
+          // Don't show "Backend not configured" error - it's expected in backend-less mode
+          // Instead, silently fall back to predefined mode behavior
+          if (response.error.includes("Backend not configured") || response.error.includes("backend-less mode")) {
+            // In backend-less mode, don't show error - just use empty tokens
+            // The parent component should handle predefined mode
+            setError(null);
+            setTokens([]);
+          } else {
+            setError(response.error);
+            setTokens([]);
+          }
         } else if (response.data) {
           const convertedTokens = convertToTokens(response.data);
           setTokens(convertedTokens);
@@ -393,6 +429,11 @@ function TokenInput({
       const chainId = getChainId(chain);
       const response = await userService.getBalance(address, chainId);
 
+      // Silently ignore backend-less mode errors in silent refresh
+      if (response.error && (response.error.includes("Backend not configured") || response.error.includes("backend-less mode"))) {
+        return; // Don't update anything, just return silently
+      }
+
       if (response.data) {
         const convertedTokens = convertToTokens(response.data);
         
@@ -437,8 +478,14 @@ function TokenInput({
       const response = await userService.getBalance(address, chainId);
 
       if (response.error) {
-        setError(response.error);
-        setTokens([]);
+        // Don't show "Backend not configured" error - it's expected in backend-less mode
+        if (response.error.includes("Backend not configured") || response.error.includes("backend-less mode")) {
+          setError(null);
+          setTokens([]);
+        } else {
+          setError(response.error);
+          setTokens([]);
+        }
       } else if (response.data) {
         const convertedTokens = convertToTokens(response.data);
         setTokens(convertedTokens);

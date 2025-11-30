@@ -402,19 +402,22 @@ const ShingruChatbot: React.FC = () => {
   const getSampleQuestions = (): string[] => {
     const questions: Record<string, string[]> = {
       en: [
-        "What is Vault?",
-        "How do stealth addresses work?",
-        "How do I receive payments?",
+        "What RWA assets are available to buy?",
+        "What do I own in my portfolio?",
+        "How do I purchase RWA shares?",
+        "Which assets are nearly sold out?",
       ],
       hi: [
-        "Vault क्या है?",
-        "स्टेल्थ एड्रेस कैसे काम करते हैं?",
-        "मैं भुगतान कैसे प्राप्त करूं?",
+        "खरीदने के लिए कौन से RWA assets उपलब्ध हैं?",
+        "मेरे portfolio में क्या है?",
+        "मैं RWA shares कैसे खरीदूं?",
+        "कौन से assets लगभग बिक चुके हैं?",
       ],
       bn: [
-        "Vault কি?",
-        "স্টেলথ অ্যাড্রেস কিভাবে কাজ করে?",
-        "আমি কিভাবে পেমেন্ট পাব?",
+        "কোন RWA assets কেনার জন্য উপলব্ধ?",
+        "আমার portfolio এ কি আছে?",
+        "আমি কিভাবে RWA shares কিনব?",
+        "কোন assets প্রায় বিক্রি হয়ে গেছে?",
       ],
     }
     return questions[selectedLanguage] || questions["en"]
@@ -564,7 +567,7 @@ const ShingruChatbot: React.FC = () => {
                     Welcome to Vault!
                   </h4>
                   <p className="text-sm text-gray-500 text-center px-4">
-                    Ask me anything about privacy-first payments on Aptos.
+                    Ask me about privacy-first payments, RWA investments, or your portfolio.
                   </p>
                 </motion.div>
               )}

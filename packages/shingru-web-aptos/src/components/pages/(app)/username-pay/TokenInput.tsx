@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   userService,
   type ChainId,
@@ -109,11 +109,27 @@ function TokenInput({
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
+  const hasInitializedPredefinedTokens = useRef(false);
 
 
   useEffect(() => {
+    // Only update if value is different to prevent infinite loops
     if (value !== undefined && value !== null && value !== "") {
-      setAmount(value);
+      setAmount((prev) => {
+        // Only update if the value actually changed
+        if (prev === value) {
+          return prev;
+        }
+        return value;
+      });
+    } else if (value === "" || value === null) {
+      // Only clear if explicitly set to empty/null (not undefined)
+      setAmount((prev) => {
+        if (prev === "") {
+          return prev;
+        }
+        return "";
+      });
     }
   }, [value]);
 
@@ -212,13 +228,23 @@ function TokenInput({
     }
 
     if (!selectedToken || !amount || amount === "0") {
-      onChange(null);
+      // Use a ref or flag to prevent infinite loops when clearing
+      const shouldEmitNull = !selectedToken || !amount || amount === "0";
+      if (shouldEmitNull) {
+        // Only emit null if we're not in a controlled mode with a value
+        if (value === undefined || value === null || value === "") {
+          onChange(null);
+        }
+      }
       return;
     }
 
     const numericAmount = serializeFormattedStringToFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      onChange(null);
+      // Only emit null if we're not in a controlled mode
+      if (value === undefined || value === null || value === "") {
+        onChange(null);
+      }
       return;
     }
 
@@ -235,6 +261,7 @@ function TokenInput({
       rawAmount: amount,
     };
 
+    // Use a ref to track last emitted value to prevent duplicate emissions
     onChange(output);
   }, [selectedToken, amount, onChange, mode, value]);
 
@@ -249,6 +276,11 @@ function TokenInput({
   // Handle predefined tokens mode
   useEffect(() => {
     if (mode === "predefined" && convertedPredefinedTokens.length > 0) {
+      // Only initialize once to prevent infinite loops
+      if (hasInitializedPredefinedTokens.current) {
+        return;
+      }
+
       setTokens(convertedPredefinedTokens);
 
       // Auto-select default token or first token
@@ -265,7 +297,17 @@ function TokenInput({
         }
       }
 
-      setSelectedToken(tokenToSelect);
+      // Only set if not already set to prevent infinite loops
+      setSelectedToken((prev) => {
+        if (prev?.mint === tokenToSelect.mint && prev?.symbol === tokenToSelect.symbol) {
+          return prev; // No change needed
+        }
+        hasInitializedPredefinedTokens.current = true;
+        return tokenToSelect;
+      });
+    } else if (mode !== "predefined") {
+      // Reset flag when mode changes
+      hasInitializedPredefinedTokens.current = false;
     }
   }, [mode, convertedPredefinedTokens, defaultToken]);
 

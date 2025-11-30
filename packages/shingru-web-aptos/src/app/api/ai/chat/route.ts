@@ -13,6 +13,34 @@ const groqClient = new Groq({
 });
 
 /**
+ * Detect if user message mentions a specific asset
+ */
+function detectMentionedAsset(message: string, assets: any[]): any | null {
+  const lowerMessage = message.toLowerCase();
+  
+  // Check for asset names, IDs, or locations
+  for (const asset of assets) {
+    const assetNameLower = asset.name.toLowerCase();
+    const assetIdLower = asset.assetId.toLowerCase();
+    const locationLower = asset.location.toLowerCase();
+    
+    // Check if message contains asset name, ID, or location
+    if (
+      lowerMessage.includes(assetNameLower) ||
+      lowerMessage.includes(assetIdLower) ||
+      lowerMessage.includes(locationLower) ||
+      // Check for partial matches (e.g., "mumbai mall" matches "Phoenix Marketcity Mumbai")
+      assetNameLower.split(' ').some(word => word.length > 3 && lowerMessage.includes(word)) ||
+      locationLower.split(',').some(part => part.trim().length > 3 && lowerMessage.includes(part.trim().toLowerCase()))
+    ) {
+      return asset;
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Create enhanced system prompt with real-time MongoDB data
  */
 async function createEnhancedSystemPrompt(
@@ -136,16 +164,22 @@ export async function POST(request: NextRequest) {
       username || null
     );
 
+    // Detect if user is asking about a specific asset
+    const mentionedAsset = detectMentionedAsset(message, assets);
+    
     // Generate AI response with enhanced context
     try {
+      // Limit response length when asset is mentioned - show card instead
+      const maxTokens = mentionedAsset ? 500 : 2000;
+      
       const completion = await groqClient.chat.completions.create({
         messages: [
-          { role: 'system', content: enhancedPrompt },
+          { role: 'system', content: enhancedPrompt + (mentionedAsset ? '\n\nIMPORTANT: User is asking about a specific asset. Keep your response brief (under 100 words) and focus on key details. The asset card will be shown separately.' : '') },
           { role: 'user', content: message }
         ],
         model: 'llama-3.1-70b-versatile', // Using the more capable model for better responses
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: maxTokens,
         top_p: 0.9,
       });
 
@@ -153,11 +187,14 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ 
         response,
+        // Include asset data if mentioned
+        asset: mentionedAsset || null,
         // Include metadata for debugging (optional)
         metadata: {
           assetsCount: assets.length,
           portfolioCount: userPortfolio.length,
           hasUserId: !!userId,
+          mentionedAsset: mentionedAsset?.assetId || null,
         }
       });
     } catch (groqError: any) {

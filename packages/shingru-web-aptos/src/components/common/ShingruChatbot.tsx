@@ -16,6 +16,12 @@ import {
   Send,
   MessageCircle,
 } from "lucide-react"
+import AssetCard from "@/components/pages/(app)/rwa/AssetCard"
+import CuteModal from "@/components/common/CuteModal"
+import CuteButton from "@/components/common/CuteButton"
+import { Asset } from "@/lib/mongodb/rwa-types"
+import { formatUiNumber } from "@/utils/formatting"
+import { useRouter } from "next/navigation"
 
 const USE_GROQ = process.env.NEXT_PUBLIC_GROQ_API_KEY ? true : false
 
@@ -41,6 +47,7 @@ interface GroqMessage {
 interface Message {
   text: string
   sender: "user" | "ai"
+  asset?: any // Asset data if mentioned in AI response
 }
 
 const MarkdownRenderer = ({ content }: { content: string }) => {
@@ -227,6 +234,12 @@ const ShingruChatbot: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState("en")
   const [streamingContent, setStreamingContent] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
+  
+  // RWA purchase modal state
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false)
+  const [quantity, setQuantity] = useState(1)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -306,6 +319,15 @@ const ShingruChatbot: React.FC = () => {
         if (apiResponse.ok) {
           const data = await apiResponse.json()
           response = data.response || 'I apologize, but I could not generate a response. Please try again.'
+          
+          // Add AI response with asset data if present
+          const aiMessage: Message = {
+            text: response,
+            sender: "ai",
+            asset: data.asset || undefined,
+          }
+          setMessages((prev) => [...prev, aiMessage])
+          return // Exit early since we've already added the message
         } else {
           // If API route fails, fall back to direct Groq
           throw new Error('API route failed, falling back to direct Groq')
@@ -329,9 +351,9 @@ const ShingruChatbot: React.FC = () => {
         }
       }
 
-      // Add AI response to messages
-      if (!isStreaming) {
-        const aiMessage = { text: response, sender: "ai" as const }
+      // Add AI response to messages (only if not already added from API route)
+      if (!isStreaming && !usedApiRoute) {
+        const aiMessage: Message = { text: response, sender: "ai" as const }
         setMessages((prev) => [...prev, aiMessage])
       }
     } catch (error) {
@@ -429,6 +451,71 @@ const ShingruChatbot: React.FC = () => {
   }
 
   const handleClearChat = () => setMessages([])
+
+  // RWA purchase handlers (reused from RWAIndex)
+  const handleBuyClick = (asset: Asset) => {
+    if (!me?.username) {
+      alert("Please log in to purchase assets")
+      return
+    }
+    setSelectedAsset(asset)
+    setQuantity(1)
+    setIsBuyModalOpen(true)
+  }
+
+  const handlePurchase = async () => {
+    if (!selectedAsset || !me?.id || !me?.username) return
+
+    setIsProcessing(true)
+    try {
+      // First, reserve the purchase in MongoDB (deduct shares and add to portfolio)
+      const reserveResponse = await fetch('/api/rwa/reserve-purchase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          assetId: selectedAsset.assetId,
+          userId: me.id,
+          quantity,
+        }),
+      })
+
+      const reserveData = await reserveResponse.json()
+
+      if (!reserveData.success) {
+        alert(reserveData.error || 'Failed to reserve purchase. Please try again.')
+        setIsProcessing(false)
+        return
+      }
+
+      console.log('✅ Purchase reserved:', reserveData.data)
+
+      // Store purchase intent in sessionStorage for the payment page
+      sessionStorage.setItem('rwa-purchase-intent', JSON.stringify({
+        assetId: selectedAsset.assetId,
+        quantity,
+        totalCost: selectedAsset.pricePerShare * quantity,
+        pricePerShare: selectedAsset.pricePerShare,
+        tempTransactionHash: reserveData.data.transactionHash,
+      }))
+      
+      // Create a payment link for this RWA purchase
+      const paymentLink = `/${me.username}/${selectedAsset.assetId}`
+      
+      // Close modal and navigate to payment page
+      setIsBuyModalOpen(false)
+      router.push(paymentLink)
+    } catch (error) {
+      console.error('Error preparing purchase:', error)
+      alert('Failed to prepare purchase. Please try again.')
+      setIsProcessing(false)
+    }
+  }
+
+  const totalCost = selectedAsset
+    ? selectedAsset.pricePerShare * quantity
+    : 0
 
   const getPlaceholderText = (): string => {
     const placeholders: Record<string, string> = {
@@ -574,35 +661,47 @@ const ShingruChatbot: React.FC = () => {
 
               <div className="space-y-4">
                 {messages.map((message, index) => (
-                  <motion.div
-                    key={index}
-                    custom={message}
-                    variants={messageVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className={`flex ${
-                      message.sender === "user"
-                        ? "justify-end"
-                        : "justify-start"
-                    }`}
-                  >
+                  <React.Fragment key={index}>
                     <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      className={`max-w-[85%] p-3 rounded-2xl ${
+                      custom={message}
+                      variants={messageVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className={`flex ${
                         message.sender === "user"
-                          ? "bg-[#FF8200] text-white rounded-br-md shadow-md"
-                          : "bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm"
+                          ? "justify-end"
+                          : "justify-start"
                       }`}
                     >
-                      {index === messages.length - 1 &&
-                      message.sender === "ai" &&
-                      isStreaming ? (
-                        renderStreamingText(streamingContent)
-                      ) : (
-                        <MarkdownRenderer content={message.text} />
-                      )}
+                      <motion.div
+                        whileHover={message.sender === "ai" && message.asset ? undefined : { scale: 1.01 }}
+                        className={`${
+                          message.sender === "user"
+                            ? "max-w-[85%] p-3 rounded-2xl bg-[#FF8200] text-white rounded-br-md shadow-md"
+                            : message.asset
+                            ? "w-full max-w-full"
+                            : "max-w-[85%] p-3 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm"
+                        }`}
+                      >
+                        {index === messages.length - 1 &&
+                        message.sender === "ai" &&
+                        isStreaming ? (
+                          renderStreamingText(streamingContent)
+                        ) : message.asset ? (
+                          // Render asset card instead of text when asset is present
+                          <div className="p-2">
+                            <AssetCard
+                              asset={message.asset}
+                              onBuyClick={handleBuyClick}
+                              isLoading={isProcessing}
+                            />
+                          </div>
+                        ) : (
+                          <MarkdownRenderer content={message.text} />
+                        )}
+                      </motion.div>
                     </motion.div>
-                  </motion.div>
+                  </React.Fragment>
                 ))}
                 <AnimatePresence>
                   {isLoading && !isStreaming && (
@@ -704,6 +803,115 @@ const ShingruChatbot: React.FC = () => {
           </motion.button>
         )}
       </AnimatePresence>
+
+      {/* Buy Modal */}
+      <CuteModal
+        isOpen={isBuyModalOpen}
+        onClose={() => {
+          setIsBuyModalOpen(false)
+          setSelectedAsset(null)
+        }}
+        title="Purchase Shares"
+        size="md"
+      >
+        {selectedAsset && (
+          <div className="space-y-6">
+            {/* Asset Info */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h3 className="font-bold text-gray-900 mb-1">
+                {selectedAsset.name}
+              </h3>
+              <p className="text-sm text-gray-500">{selectedAsset.location}</p>
+            </div>
+
+            {/* Quantity Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Shares
+              </label>
+              <div className="flex items-center gap-3">
+                <CuteButton
+                  variant="bordered"
+                  size="md"
+                  isDisabled={quantity <= 1}
+                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                >
+                  -
+                </CuteButton>
+                <div className="flex-1 text-center">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {quantity}
+                  </span>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {selectedAsset.availableShares} available
+                  </div>
+                </div>
+                <CuteButton
+                  variant="bordered"
+                  size="md"
+                  isDisabled={quantity >= selectedAsset.availableShares}
+                  onPress={() =>
+                    setQuantity(
+                      Math.min(selectedAsset.availableShares, quantity + 1)
+                    )
+                  }
+                >
+                  +
+                </CuteButton>
+              </div>
+            </div>
+
+            {/* Cost Breakdown */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Price per Share</span>
+                <span className="font-medium text-gray-900">
+                  {formatUiNumber(selectedAsset.pricePerShare, "", {
+                    maxDecimals: 2,
+                  })}{" "}
+                  APT
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Quantity</span>
+                <span className="font-medium text-gray-900">{quantity}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <span className="text-gray-900">Total Cost</span>
+                <span className="text-primary-600">
+                  {formatUiNumber(totalCost, "", { maxDecimals: 2 })} APT
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3 pt-2">
+              <CuteButton
+                color="primary"
+                variant="solid"
+                size="lg"
+                fullWidth
+                radius="lg"
+                isDisabled={quantity > selectedAsset.availableShares || isProcessing}
+                isLoading={isProcessing}
+                onPress={handlePurchase}
+                className="shadow-md hover:shadow-lg transition-shadow"
+              >
+                Purchase Shares
+              </CuteButton>
+              <CuteButton
+                variant="ghost"
+                color="gray"
+                size="lg"
+                fullWidth
+                onPress={() => setIsBuyModalOpen(false)}
+              >
+                Cancel
+              </CuteButton>
+            </div>
+          </div>
+        )}
+      </CuteModal>
     </motion.div>
   )
 }

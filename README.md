@@ -1,4 +1,4 @@
-# Vault - Get Paid, Stay Private
+# Vault - Invest in RWA Fractions with Privacy
 ### Aptos Hackathon IBW Edition 2025
 
 **A privacy-first payment platform using stealth addresses that enables users to receive payments without exposing their main wallet. Maintains full self-custody while protecting financial privacy.**

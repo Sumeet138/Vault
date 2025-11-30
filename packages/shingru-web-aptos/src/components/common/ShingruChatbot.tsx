@@ -44,10 +44,24 @@ interface GroqMessage {
   content: string
 }
 
+interface UIComponent {
+  type: 'asset_cards' | 'action_button' | 'info_card' | string
+  assets?: any[]
+  label?: string
+  action?: string
+  url?: string
+  title?: string
+  content?: string
+  [key: string]: any
+}
+
 interface Message {
   text: string
   sender: "user" | "ai"
-  asset?: any // Asset data if mentioned in AI response
+  assets?: any[] // Legacy: Array of asset data if mentioned in AI response
+  ui?: {
+    components?: UIComponent[] // Generative UI components
+  }
 }
 
 const MarkdownRenderer = ({ content }: { content: string }) => {
@@ -226,6 +240,7 @@ const ShingruChatbot: React.FC = () => {
   // Safe auth hook that doesn't throw if AuthProvider is not available
   const authContext = useContext(AuthContext)
   const me = authContext?.me || null
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -235,11 +250,14 @@ const ShingruChatbot: React.FC = () => {
   const [streamingContent, setStreamingContent] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
   
-  // RWA purchase modal state
+  // RWA purchase modal state (exact same as RWA route)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
   const [isProcessing, setIsProcessing] = useState(false)
+  
+  // Loading state for asset cards
+  const [loadingAssets, setLoadingAssets] = useState<string[]>([])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -304,6 +322,16 @@ const ShingruChatbot: React.FC = () => {
       
       // Try using the API route first (with MongoDB integration)
       try {
+        // Build conversation history (last 10 messages for context)
+        const conversationHistory = messages
+          .slice(-10) // Last 10 messages for context
+          .map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.text
+          }));
+        
+        console.log('💬 [Chatbot] Sending conversation history:', conversationHistory.length, 'messages');
+        
         const apiResponse = await fetch('/api/ai/chat', {
           method: 'POST',
           headers: {
@@ -313,6 +341,7 @@ const ShingruChatbot: React.FC = () => {
             message: userMessage.text,
             userId: me?.id || null,
             username: me?.username || null,
+            conversationHistory: conversationHistory, // Send conversation history for context
           }),
         })
 
@@ -320,39 +349,138 @@ const ShingruChatbot: React.FC = () => {
           const data = await apiResponse.json()
           response = data.response || 'I apologize, but I could not generate a response. Please try again.'
           
+          // Handle assets array or legacy asset singular
+          let assetsArray: any[] = [];
+          if (data.assets && Array.isArray(data.assets) && data.assets.length > 0) {
+            assetsArray = data.assets;
+          } else if (data.asset) {
+            // Backward compatibility: convert singular asset to array
+            assetsArray = [data.asset];
+          }
+          
+          // Log for debugging with full asset details
+          if (assetsArray.length > 0) {
+            console.log('✅ [Chatbot] Received assets data:', {
+              count: assetsArray.length,
+              assets: assetsArray.map((a: any) => ({ 
+                assetId: a.assetId, 
+                name: a.name,
+                location: a.location,
+                description: a.description ? a.description.substring(0, 50) + '...' : 'NO DESCRIPTION',
+                pricePerShare: a.pricePerShare,
+                availableShares: a.availableShares,
+                totalShares: a.totalShares,
+                status: a.status,
+                hasAllFields: !!(a.assetId && a.name && a.location && a.description && a.pricePerShare !== undefined && a.availableShares !== undefined && a.totalShares !== undefined)
+              })),
+            });
+          } else {
+            console.log('⚠️ [Chatbot] No assets in response:', {
+              hasAssets: !!data.assets,
+              assetsLength: data.assets?.length || 0,
+              hasAsset: !!data.asset,
+              metadata: data.metadata
+            });
+          }
+          
           // Add AI response with asset data if present
           const aiMessage: Message = {
             text: response,
             sender: "ai",
-            asset: data.asset || undefined,
+            assets: assetsArray.length > 0 ? assetsArray : undefined,
           }
+          
+          console.log('💬 [Chatbot] Adding message to chat:', {
+            hasText: !!aiMessage.text,
+            textLength: aiMessage.text?.length || 0,
+            hasAssets: !!aiMessage.assets,
+            assetsCount: aiMessage.assets?.length || 0
+          });
+          
           setMessages((prev) => [...prev, aiMessage])
           return // Exit early since we've already added the message
         } else {
-          // If API route fails, fall back to direct Groq
-          throw new Error('API route failed, falling back to direct Groq')
+          // API route returned an error - parse the error response
+          let errorMessage = 'API route failed';
+          let errorDetails: any = null;
+          
+          try {
+            const errorData = await apiResponse.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+            errorDetails = errorData;
+            console.error('❌ API route error response:', {
+              status: apiResponse.status,
+              statusText: apiResponse.statusText,
+              error: errorMessage,
+              details: errorData,
+            });
+          } catch (parseError) {
+            // If JSON parsing fails, try to get text response
+            try {
+              const errorText = await apiResponse.text();
+              console.error('❌ API route error (non-JSON):', {
+                status: apiResponse.status,
+                statusText: apiResponse.statusText,
+                body: errorText,
+              });
+              errorMessage = `API route failed with status ${apiResponse.status}: ${errorText}`;
+            } catch (textError) {
+              console.error('❌ API route error (unable to read response):', {
+                status: apiResponse.status,
+                statusText: apiResponse.statusText,
+              });
+              errorMessage = `API route failed with status ${apiResponse.status}`;
+            }
+          }
+          
+          // Throw error with details for better debugging
+          throw new Error(`API route failed: ${errorMessage}`)
         }
-      } catch (apiError) {
+      } catch (apiError: any) {
+        // Log the full error for debugging
+        console.error('❌ API route error caught:', {
+          error: apiError,
+          message: apiError?.message,
+          stack: apiError?.stack,
+        });
+        
+        // Check if it's a network error or API error
+        const isNetworkError = apiError?.message?.includes('fetch') || 
+                              apiError?.message?.includes('network') ||
+                              apiError?.name === 'TypeError';
+        
         // Fallback to direct Groq client if API route is not available
-        console.log('API route not available, using direct Groq client:', apiError)
-        if (USE_GROQ && groqClient) {
-          const streamPlaceholder = { text: "", sender: "ai" as const }
-          setMessages((prev) => [...prev, streamPlaceholder])
-          response = await handleStreamWithGroq(userMessage.text)
-          setMessages((prev) => {
-            const newMessages = [...prev]
-            newMessages[newMessages.length - 1].text = response
-            return newMessages
-          })
+        if (USE_GROQ && groqClient && !isNetworkError) {
+          console.log('⚠️ API route unavailable, falling back to direct Groq client');
+          try {
+            const streamPlaceholder = { text: "", sender: "ai" as const }
+            setMessages((prev) => [...prev, streamPlaceholder])
+            response = await handleStreamWithGroq(userMessage.text)
+            setMessages((prev) => {
+              const newMessages = [...prev]
+              newMessages[newMessages.length - 1].text = response
+              return newMessages
+            })
+            return // Exit early after handling with Groq
+          } catch (groqError) {
+            console.error('❌ Direct Groq client also failed:', groqError);
+            // Fall through to error message
+          }
+        }
+        
+        // Show user-friendly error message
+        if (apiError?.message?.includes('AI service not configured')) {
+          response = "I'm sorry, but the AI service is not configured. Please set up your GROQ API key in the environment variables (GROQ_API_KEY or NEXT_PUBLIC_GROQ_API_KEY) to enable chat functionality."
+        } else if (isNetworkError) {
+          response = "I'm having trouble connecting to the AI service. Please check your internet connection and try again."
         } else {
-          // Fallback response when API is not configured
-          response =
-            "I'm sorry, but the AI service is not configured. Please set up your GROQ API key in the environment variables (GROQ_API_KEY or NEXT_PUBLIC_GROQ_API_KEY) to enable chat functionality."
+          response = `I encountered an error: ${apiError?.message || 'Unknown error'}. Please try again or contact support if the issue persists.`
         }
       }
 
       // Add AI response to messages (only if not already added from API route)
-      if (!isStreaming && !usedApiRoute) {
+      // Note: API route already adds the message and returns early, so this only runs for fallback cases
+      if (!isStreaming) {
         const aiMessage: Message = { text: response, sender: "ai" as const }
         setMessages((prev) => [...prev, aiMessage])
       }
@@ -468,7 +596,8 @@ const ShingruChatbot: React.FC = () => {
 
     setIsProcessing(true)
     try {
-      // First, reserve the purchase in MongoDB (deduct shares and add to portfolio)
+      // Reserve the purchase in MongoDB (exact same as RWA route)
+      // Exact same flow as RWAIndex
       const reserveResponse = await fetch('/api/rwa/reserve-purchase', {
         method: 'POST',
         headers: {
@@ -492,6 +621,7 @@ const ShingruChatbot: React.FC = () => {
       console.log('✅ Purchase reserved:', reserveData.data)
 
       // Store purchase intent in sessionStorage for the payment page
+      // Include the temp transaction hash so payment processor can update it
       sessionStorage.setItem('rwa-purchase-intent', JSON.stringify({
         assetId: selectedAsset.assetId,
         quantity,
@@ -501,9 +631,11 @@ const ShingruChatbot: React.FC = () => {
       }))
       
       // Create a payment link for this RWA purchase
+      // The link tag will be the assetId, which allows the payment processor to identify RWA purchases
       const paymentLink = `/${me.username}/${selectedAsset.assetId}`
       
       // Close modal and navigate to payment page
+      // The payment page will handle creating the link if it doesn't exist
       setIsBuyModalOpen(false)
       router.push(paymentLink)
     } catch (error) {
@@ -674,11 +806,11 @@ const ShingruChatbot: React.FC = () => {
                       }`}
                     >
                       <motion.div
-                        whileHover={message.sender === "ai" && message.asset ? undefined : { scale: 1.01 }}
+                        whileHover={message.sender === "ai" && message.assets ? undefined : { scale: 1.01 }}
                         className={`${
                           message.sender === "user"
                             ? "max-w-[85%] p-3 rounded-2xl bg-[#FF8200] text-white rounded-br-md shadow-md"
-                            : message.asset
+                            : message.assets && message.assets.length > 0
                             ? "w-full max-w-full"
                             : "max-w-[85%] p-3 rounded-2xl bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm"
                         }`}
@@ -687,14 +819,42 @@ const ShingruChatbot: React.FC = () => {
                         message.sender === "ai" &&
                         isStreaming ? (
                           renderStreamingText(streamingContent)
-                        ) : message.asset ? (
-                          // Render asset card instead of text when asset is present
-                          <div className="p-2">
-                            <AssetCard
-                              asset={message.asset}
-                              onBuyClick={handleBuyClick}
-                              isLoading={isProcessing}
-                            />
+                        ) : message.assets && message.assets.length > 0 ? (
+                          // Render both brief text and asset cards (1-2 cards) when assets are present
+                          <div className="space-y-3">
+                            {message.text && message.text.trim() && (
+                              <div className="text-sm text-gray-700 mb-2">
+                                <MarkdownRenderer content={message.text} />
+                              </div>
+                            )}
+                            {/* Render assets in a grid (1-2 cards) */}
+                            <div className={`grid gap-3 ${message.assets.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                              {message.assets.map((asset: any, assetIndex: number) => {
+                                // Validate asset has required fields
+                                if (!asset || !asset.assetId || !asset.name) {
+                                  console.error('❌ [Chatbot] Invalid asset data:', asset);
+                                  return null;
+                                }
+                                
+                                console.log('🎴 [Chatbot] Rendering asset card:', {
+                                  assetId: asset.assetId,
+                                  name: asset.name,
+                                  hasDescription: !!asset.description,
+                                  hasPrice: asset.pricePerShare !== undefined,
+                                  hasShares: asset.availableShares !== undefined && asset.totalShares !== undefined
+                                });
+                                
+                                return (
+                                  <div key={asset.assetId || assetIndex} className="p-2">
+                                    <AssetCard
+                                      asset={asset as Asset}
+                                      onBuyClick={handleBuyClick}
+                                      isLoading={isProcessing}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         ) : (
                           <MarkdownRenderer content={message.text} />

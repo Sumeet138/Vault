@@ -203,8 +203,34 @@ export default function AptosPayButton({
       // Submit Payment info to get paymentInfoId (if needed)
       const paymentInfoId = await submitPaymentInfoAndGetId?.() || "";
 
-      // Determine label (link ID) - use "personal" for backend-less mode
-      const label = stealthData?.linkData?.id || "personal";
+      // Determine label (link ID)
+      // For RWA purchases: use assetId from tag if linkData doesn't exist
+      // For regular payments: use linkData.id or "personal" as fallback
+      let label = stealthData?.linkData?.id;
+      
+      // If no linkData.id, check if this is an RWA purchase (tag should be assetId)
+      if (!label && stealthData?.tag) {
+        // Check if tag matches an RWA assetId pattern (contains hyphens like "mumbai-phoenix-mall")
+        // Or we can check sessionStorage for RWA purchase intent
+        try {
+          const rwaIntent = sessionStorage.getItem('rwa-purchase-intent');
+          if (rwaIntent) {
+            const purchaseInfo = JSON.parse(rwaIntent);
+            if (purchaseInfo.assetId && purchaseInfo.assetId === stealthData.tag) {
+              label = stealthData.tag; // Use assetId as label for RWA purchases
+              console.log("✅ RWA purchase detected, using assetId as label:", label);
+            }
+          }
+        } catch (e) {
+          // Ignore sessionStorage errors
+        }
+      }
+      
+      // Final fallback
+      if (!label) {
+        label = stealthData?.tag || "personal";
+      }
+      
       console.log("LABEL:", label);
 
       console.log("Building transaction...");

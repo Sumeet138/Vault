@@ -12,19 +12,19 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Vault - Get Paid, Stay Private",
+  title: "Vault - Invest in RWA Fractions with Privacy",
   description:
-    "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
+  "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
   openGraph: {
-    title: "Vault - Get Paid, Stay Private",
+    title: "Vault - Invest in RWA Fractions with Privacy",
     url: getBaseUrl(),
     description:
       "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
   },
   twitter: {
-    title: "Vault - Get Paid, Stay Private",
+    title: "Vault - Invest in RWA Fractions with Privacy",
     description:
-      "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
+    "Create shareable payment links that generate fresh, untraceable addresses for every payment. Maintain full self-custody while protecting your financial privacy.",
   },
   icons: {
     icon: [

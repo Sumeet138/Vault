@@ -109,6 +109,8 @@ export default function PaymentInterface() {
     totalCost: number;
     pricePerShare: number;
   } | null>(null);
+  // Toggle for manual vs auto-fill amount entry (default: auto-fill mode OFF - accepts pre-filled data)
+  const [isManualMode, setIsManualMode] = useState(false);
 
   // Fundraisers should always allow open amounts, even with a goal
   const isFundraiser = addressData?.linkData?.template === "fundraiser";
@@ -133,8 +135,9 @@ export default function PaymentInterface() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Step 1: Always set APT token if not set
-    if (!selectedToken) {
+    // Step 1: Always set APT token if not set (for both backend-less mode and dynamic links)
+    // Only skip if it's a fixed price payment (those use StaticTokenInput)
+    if (!selectedToken && !isFixedPrice) {
       const aptToken = {
         symbol: 'APT',
         name: 'Aptos',
@@ -142,8 +145,12 @@ export default function PaymentInterface() {
         isNative: true,
         address: '0x1::aptos_coin::AptosCoin',
       };
-      console.log('✅ Auto-selecting APT token (backend-less mode)');
+      console.log('✅ Auto-selecting APT token (for open payments)');
       setSelectedToken(aptToken);
+      // Also ensure amount is at least empty string (not null/undefined) for user to type
+      if (!amount || amount === '') {
+        setAmount('');
+      }
     }
 
     // Step 2: Check for RWA purchase intent from sessionStorage
@@ -194,17 +201,17 @@ export default function PaymentInterface() {
               totalCost: purchaseInfo.totalCost
             });
 
-            // Set both token and amount immediately
+            // Set both token and amount immediately (always set, regardless of toggle state)
             setSelectedToken(aptToken);
             setAmount(formattedAmount);
 
+            // Also set manual mode to false (auto-fill) by default for RWA purchases
+            setIsManualMode(false);
+
             // Double-check after a brief delay to ensure it's set
             setTimeout(() => {
-              if (!amount || amount === '') {
-                console.log('⚠️ Amount was empty, re-setting:', formattedAmount);
-                setAmount(formattedAmount);
-              }
-            }, 100);
+              setAmount(formattedAmount);
+            }, 200);
           }
         } else {
           console.warn('Invalid RWA purchase intent data, clearing...');
@@ -221,7 +228,7 @@ export default function PaymentInterface() {
         // Ignore storage errors
       }
     }
-  }, []); // Run only once on mount
+  }, [isFixedPrice]); // Only re-run if fixed price changes, not when selectedToken changes
 
   // Fetch balance for fixed token
   useEffect(() => {
@@ -299,15 +306,15 @@ export default function PaymentInterface() {
       // This handler is for open payments only
       if (isFixedPrice) return;
 
-      // For RWA purchases, always preserve the RWA amount
-      if (rwaPurchaseInfo && rwaPurchaseInfo.totalCost > 0) {
+      // For RWA purchases: only preserve amount if manual mode is OFF
+      if (rwaPurchaseInfo && rwaPurchaseInfo.totalCost > 0 && !isManualMode) {
         // If output is null or amount doesn't match, restore RWA amount
         if (!output || output.amount !== rwaPurchaseInfo.totalCost) {
           const formattedAmount = rwaPurchaseInfo.totalCost < 1
             ? rwaPurchaseInfo.totalCost.toFixed(8).replace(/\.?0+$/, '')
             : rwaPurchaseInfo.totalCost.toFixed(6).replace(/\.?0+$/, '');
 
-          console.log('🔄 Restoring RWA amount:', formattedAmount);
+          console.log('🔄 Restoring RWA amount (auto mode):', formattedAmount);
           setAmount(formattedAmount);
 
           // Ensure token is set
@@ -337,7 +344,7 @@ export default function PaymentInterface() {
         }
       }
 
-      // Normal flow for non-RWA purchases
+      // Normal flow for open payments (manual mode or non-RWA)
       // Always set token if provided (even if amount is 0) - ensures token is selected
       if (output && output.token) {
         setSelectedToken({
@@ -347,30 +354,51 @@ export default function PaymentInterface() {
           address: output.token.address,
         });
 
-        // Only set amount if it's provided and > 0
-        if (output.rawAmount && output.amount > 0) {
+        // Set amount if provided (allow 0 for user to type)
+        if (output.rawAmount !== undefined) {
           setAmount(output.rawAmount);
         }
       } else if (!output) {
-        // Only clear if not an RWA purchase
-        if (!rwaPurchaseInfo) {
+        // Only clear amount if not an RWA purchase or if manual mode is ON
+        // NEVER clear selectedToken for open payments - always keep APT selected
+        if (!rwaPurchaseInfo || isManualMode) {
           setAmount("");
-          setSelectedToken(null);
+          // Don't clear token - keep APT selected for open payments
         }
       }
     },
-    [isFixedPrice, setAmount, setSelectedToken, rwaPurchaseInfo, selectedToken]
+    [isFixedPrice, setAmount, setSelectedToken, rwaPurchaseInfo, selectedToken, isManualMode]
   );
 
-  // Safeguard: Ensure amount is set if we have RWA purchase info but amount is empty
+  // Safeguard: Ensure token is ALWAYS set for open payments (non-fixed, non-RWA)
   useEffect(() => {
-    if (rwaPurchaseInfo && rwaPurchaseInfo.totalCost > 0 && (!amount || amount === '')) {
+    if (!isFixedPrice && !rwaPurchaseInfo && !selectedToken) {
+      const aptToken = {
+        symbol: 'APT',
+        name: 'Aptos',
+        decimals: 8,
+        isNative: true,
+        address: '0x1::aptos_coin::AptosCoin',
+      };
+      console.log('✅ Ensuring APT token is set (open payment)');
+      setSelectedToken(aptToken);
+    }
+  }, [isFixedPrice, rwaPurchaseInfo, selectedToken, setSelectedToken]);
+
+  // Safeguard: Ensure amount is ALWAYS set if we have RWA purchase info (especially in auto mode)
+  useEffect(() => {
+    if (rwaPurchaseInfo && rwaPurchaseInfo.totalCost > 0) {
       const formattedAmount = rwaPurchaseInfo.totalCost < 1
         ? rwaPurchaseInfo.totalCost.toFixed(8).replace(/\.?0+$/, '')
         : rwaPurchaseInfo.totalCost.toFixed(6).replace(/\.?0+$/, '');
 
-      console.log('⚠️ Amount was empty, restoring from RWA purchase info:', formattedAmount);
-      setAmount(formattedAmount);
+      // In auto mode, always ensure amount is set
+      if (!isManualMode) {
+        if (!amount || amount === '' || amount !== formattedAmount) {
+          console.log('⚠️ Ensuring RWA amount is set (auto mode):', formattedAmount);
+          setAmount(formattedAmount);
+        }
+      }
 
       // Also ensure token is set
       if (!selectedToken) {
@@ -384,7 +412,31 @@ export default function PaymentInterface() {
         setSelectedToken(aptToken);
       }
     }
-  }, [rwaPurchaseInfo, amount, selectedToken, setAmount, setSelectedToken]);
+  }, [rwaPurchaseInfo, amount, selectedToken, setAmount, setSelectedToken, isManualMode]);
+
+  // When switching to auto mode, restore the pre-filled amount immediately
+  useEffect(() => {
+    if (!isManualMode && rwaPurchaseInfo && rwaPurchaseInfo.totalCost > 0) {
+      const formattedAmount = rwaPurchaseInfo.totalCost < 1
+        ? rwaPurchaseInfo.totalCost.toFixed(8).replace(/\.?0+$/, '')
+        : rwaPurchaseInfo.totalCost.toFixed(6).replace(/\.?0+$/, '');
+
+      console.log('🔄 Switching to auto mode, restoring RWA amount:', formattedAmount);
+      setAmount(formattedAmount);
+
+      // Ensure token is set
+      if (!selectedToken) {
+        const aptToken = {
+          symbol: 'APT',
+          name: 'Aptos',
+          decimals: 8,
+          isNative: true,
+          address: '0x1::aptos_coin::AptosCoin',
+        };
+        setSelectedToken(aptToken);
+      }
+    }
+  }, [isManualMode, rwaPurchaseInfo, setAmount, setSelectedToken, selectedToken]);
 
   // Check if collect info is required and validate it
   const collectInfoValidation = useMemo(() => {
@@ -621,6 +673,31 @@ export default function PaymentInterface() {
                 transition={{ duration: 0.4, ease: EASE_OUT_QUART, delay: 0.05 }}
                 className="space-y-3"
               >
+                {/* Toggle for manual vs auto-fill (only show if RWA purchase or link has pre-filled amount) */}
+                {(rwaPurchaseInfo || (addressData?.linkData && !isFixedPrice)) && (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        {isManualMode ? 'Manual Entry' : 'Auto-fill Amount'}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {isManualMode ? '(Enter any amount)' : '(Use pre-filled amount)'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsManualMode(!isManualMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${isManualMode ? 'bg-gray-300' : 'bg-primary-600'
+                        }`}
+                      aria-label={isManualMode ? 'Switch to auto-fill' : 'Switch to manual entry'}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isManualMode ? 'translate-x-1' : 'translate-x-6'
+                          }`}
+                      />
+                    </button>
+                  </div>
+                )}
                 {isFixedPrice && tokenForFixedPrice ? (
                   <StaticTokenInput
                     amount={amount}
@@ -635,6 +712,7 @@ export default function PaymentInterface() {
                     defaultToken="APTOS"
                     value={amount}
                     onChange={handleTokenInputChange}
+                    disabled={isFixedPrice || (!isManualMode && !!rwaPurchaseInfo)}
                   />
                 ) : (
                   // Backend-less mode: APT only - simple amount input (no token selector)
@@ -664,6 +742,7 @@ export default function PaymentInterface() {
                         type="text"
                         inputMode="decimal"
                         value={amount}
+                        disabled={!isManualMode && !!rwaPurchaseInfo}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const value = e.target.value;
                           // Allow only numbers and decimal point

@@ -695,7 +695,7 @@ function TokenInput({
                 onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder={placeholder}
                 className="text-xl font-semibold outline-none w-full bg-transparent text-gray-900 placeholder-gray-400"
-                disabled={!selectedToken}
+                disabled={disabled || (!selectedToken && mode === "balance")}
               />
             </SkeletonLoader>
             {showBalance && (
@@ -750,7 +750,7 @@ function TokenInput({
           onChange={(e) => handleAmountChange(e.target.value)}
           placeholder={placeholder}
           className={`text-2xl pl-2 font-semibold outline-none text-gray-900 placeholder-gray-400 focus-visible:ring-0 border-none ${disabled ? 'opacity-75 cursor-not-allowed' : ''}`}
-          disabled={disabled || !selectedToken}
+          disabled={disabled}
         />
 
         {/* Right side - Token selector */}

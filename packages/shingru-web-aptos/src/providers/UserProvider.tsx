@@ -290,29 +290,52 @@ export default function UserProvider({ children }: UserProviderProps) {
         
         if (chainConfig?.stealthProgramId) {
           console.log("📡 Scanning for payment events...");
-          const scanner = new AptosEventScanner(chainConfig.stealthProgramId);
-          
-          // Convert meta keys from hex strings to Uint8Array
-          const metaViewPriv = Buffer.from(metaKeys.APTOS.metaViewPriv, "hex");
-          const metaSpendPriv = Buffer.from(metaKeys.APTOS.metaSpendPriv, "hex");
+          try {
+            const scanner = new AptosEventScanner(chainConfig.stealthProgramId);
+            
+            // Convert meta keys from hex strings to Uint8Array
+            const metaViewPriv = Buffer.from(metaKeys.APTOS.metaViewPriv, "hex");
+            const metaSpendPriv = Buffer.from(metaKeys.APTOS.metaSpendPriv, "hex");
 
-          // Query payment events
-          const coinType = "0x1::aptos_coin::AptosCoin";
-          const paymentEvents = await scanner.queryPaymentEvents(coinType, 100);
-          console.log(`📦 Found ${paymentEvents.length} payment events`);
-          
-          // Scan and decrypt payments
-          const scannedPayments = await scanner.scanPaymentEvents(
-            paymentEvents,
-            metaViewPriv,
-            metaSpendPriv
-          );
-          console.log(`✅ Scanned ${scannedPayments.length} payments for this user`);
+            // Query payment events - wrap in try-catch to handle API errors gracefully
+            const coinType = "0x1::aptos_coin::AptosCoin";
+            let paymentEvents: any[] = [];
+            try {
+              paymentEvents = await scanner.queryPaymentEvents(coinType, 100);
+              console.log(`📦 Found ${paymentEvents.length} payment events`);
+            } catch (queryError: any) {
+              // If query fails (e.g., JSON parse error, rate limit), just log and continue
+              // Don't break the entire balance fetch - we can still use Supabase data
+              console.warn("⚠️ Failed to query payment events (will use Supabase data only):", {
+                error: queryError?.message || queryError,
+                type: queryError?.name || 'Unknown'
+              });
+              paymentEvents = []; // Continue with empty array
+            }
+            
+            // Scan and decrypt payments (only if we have events)
+            let scannedPayments: any[] = [];
+            if (paymentEvents.length > 0) {
+              try {
+                scannedPayments = await scanner.scanPaymentEvents(
+                  paymentEvents,
+                  metaViewPriv,
+                  metaSpendPriv
+                );
+                console.log(`✅ Scanned ${scannedPayments.length} payments for this user`);
+              } catch (scanError: any) {
+                console.warn("⚠️ Failed to scan payment events (will use Supabase data only):", {
+                  error: scanError?.message || scanError
+                });
+                scannedPayments = []; // Continue with empty array
+              }
+            }
 
-          // Save new payments to Supabase
-          const { supabase } = await import("@/lib/supabase/client");
-          
-          for (const payment of scannedPayments) {
+            // Save new payments to Supabase (only if we have scanned payments)
+            if (scannedPayments.length > 0) {
+              const { supabase } = await import("@/lib/supabase/client");
+              
+              for (const payment of scannedPayments) {
             try {
               console.log("💾 Processing payment:", {
                 txHash: payment.transactionHash,
@@ -410,6 +433,14 @@ export default function UserProvider({ children }: UserProviderProps) {
             } catch (error) {
               console.error("❌ Error saving payment to Supabase:", error);
             }
+          }
+            }
+          } catch (eventScanError: any) {
+            // If event scanning fails completely, log but don't break the flow
+            // We can still fetch balances from Supabase
+            console.warn("⚠️ Event scanning failed (continuing with Supabase data only):", {
+              error: eventScanError?.message || eventScanError
+            });
           }
         }
 

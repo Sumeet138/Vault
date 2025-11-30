@@ -30,15 +30,19 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
             </div>
           </Link>
           <nav className="flex items-center gap-6" onMouseLeave={() => setHoveredLink(null)}>
-            {["Dashboard", "Links", "Activity", "Settings"].map((item) => (
+            {[
+              { label: "Dashboard", href: "/app" },
+              { label: "Activities", href: "/app/activities" },
+              { label: "Invest", href: "/app/rwa" },
+            ].map((item) => (
               <Link
-                key={item}
-                href={`/${item.toLowerCase()}`}
+                key={item.label}
+                href={item.href}
                 className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors relative px-2 py-1"
-                onMouseEnter={() => setHoveredLink(item)}
+                onMouseEnter={() => setHoveredLink(item.label)}
               >
-                {item}
-                {hoveredLink === item && (
+                {item.label}
+                {hoveredLink === item.label && (
                   <motion.div
                     layoutId="navbar-hover"
                     className="absolute inset-0 bg-gray-100/50 rounded-md -z-10"
